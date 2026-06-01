@@ -1,0 +1,186 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap');
+
+:root {
+  --verde: #1a6b3a;
+  --verde-oscuro: #0f4023;
+  --verde-claro: #23a05a;
+  --negro: #0d0d0d;
+  --gris-oscuro: #1a1a1a;
+  --gris: #2e2e2e;
+  --gris-medio: #6b6b6b;
+  --gris-claro: #e8e8e8;
+  --blanco: #f5f5f0;
+  --dorado: #c9a84c;
+  --rojo: #c0392b;
+  --rojo-claro: #e74c3c;
+  --azul-info: #2980b9;
+  --amarillo: #f39c12;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Barlow', sans-serif;
+  background: var(--negro);
+  color: var(--blanco);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--gris-oscuro); }
+::-webkit-scrollbar-thumb { background: var(--verde); border-radius: 3px; }
+
+/* ── Inputs ── */
+input, select, textarea {
+  font-family: 'Barlow', sans-serif;
+  background: var(--gris);
+  border: 1px solid #3a3a3a;
+  color: var(--blanco);
+  border-radius: 6px;
+  padding: 10px 14px;
+  width: 100%;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--verde-claro);
+}
+input::placeholder, textarea::placeholder { color: var(--gris-medio); }
+
+/* ── Buttons ── */
+.btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 11px 22px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-primary { background: var(--verde); color: white; }
+.btn-primary:hover { background: var(--verde-claro); transform: translateY(-1px); }
+.btn-secondary { background: transparent; border: 1.5px solid var(--verde); color: var(--verde-claro); }
+.btn-secondary:hover { background: var(--verde-oscuro); }
+.btn-danger { background: var(--rojo); color: white; }
+.btn-danger:hover { background: var(--rojo-claro); }
+.btn-gold { background: var(--dorado); color: var(--negro); }
+.btn-gold:hover { filter: brightness(1.1); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+/* ── Cards ── */
+.card {
+  background: var(--gris-oscuro);
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 20px;
+}
+.card-hover:hover {
+  border-color: var(--verde);
+  transform: translateY(-2px);
+  transition: all 0.2s;
+}
+
+/* ── Status badges ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.badge-pendiente { background: #3d2b00; color: var(--amarillo); }
+.badge-revision { background: #1a2a4a; color: #5dade2; }
+.badge-aprobado { background: #0f3020; color: #52be80; }
+.badge-rechazado { background: #3d0f0f; color: #ec7063; }
+.badge-extraordinario { background: #2d1f4a; color: #bb8fce; }
+
+/* ── Layout ── */
+.sidebar {
+  width: 240px;
+  min-height: 100vh;
+  background: var(--gris-oscuro);
+  border-right: 1px solid #222;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0; top: 0;
+  z-index: 100;
+}
+.main-content {
+  margin-left: 240px;
+  padding: 32px;
+  min-height: 100vh;
+}
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main-content { margin-left: 0; padding: 16px; }
+}
+
+/* ── Table ── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  color: var(--gris-medio);
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid #2a2a2a;
+}
+td { padding: 12px 14px; border-bottom: 1px solid #1e1e1e; vertical-align: middle; }
+tr:hover td { background: #1e1e1e; }
+
+/* ── Stripe diagonal pattern header ── */
+.hero-stripe {
+  background: repeating-linear-gradient(
+    -55deg,
+    transparent,
+    transparent 10px,
+    rgba(255,255,255,0.015) 10px,
+    rgba(255,255,255,0.015) 20px
+  );
+}
+
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 0.3s ease forwards; }
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(35,160,90,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(35,160,90,0); }
+}
+.pulse-green { animation: pulse-green 2s infinite; }

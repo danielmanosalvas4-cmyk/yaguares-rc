@@ -1,0 +1,41 @@
+// firestore.rules
+// Sube estas reglas en Firebase Console > Firestore > Reglas
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Solo admins pueden leer/escribir socios
+    match /socios/{socioId} {
+      allow read: if request.auth != null && 
+        (isAdmin() || request.auth.uid == socioId);
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    // Pagos: admin todo, jugador solo los suyos
+    match /pagos/{pagoId} {
+      allow read: if request.auth != null && 
+        (isAdmin() || resource.data.socioId == request.auth.uid);
+      allow create: if request.auth != null && 
+        request.resource.data.socioId == request.auth.uid;
+      allow update: if request.auth != null && isAdmin();
+      allow delete: if request.auth != null && isAdmin();
+    }
+
+    // Cobros extraordinarios: admin escribe, todos leen si autenticados
+    match /cobros/{cobroId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    // Perfil de admins
+    match /admins/{adminId} {
+      allow read: if request.auth != null && request.auth.uid == adminId;
+      allow write: if false; // Solo desde Firebase Console
+    }
+
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+  }
+}
