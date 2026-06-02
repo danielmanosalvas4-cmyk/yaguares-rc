@@ -1,0 +1,26 @@
+{
+  "short_name": "Yaguares RC",
+  "name": "Yaguares RC — Gestión de Cobros",
+  "description": "Sistema de cobros del Club de Rugby Yaguares RC",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#1a6b3a",
+  "background_color": "#0d0d0d",
+  "orientation": "portrait",
+  "categories": ["finance", "sports"],
+  "lang": "es-EC"
+}

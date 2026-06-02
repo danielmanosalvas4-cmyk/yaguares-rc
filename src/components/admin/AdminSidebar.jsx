@@ -9,14 +9,14 @@ const links = [
   { to: "/admin", label: "Dashboard", icon: "📊", end: true },
   { to: "/admin/socios", label: "Socios", icon: "👥" },
   { to: "/admin/pagos", label: "Validar Pagos", icon: "✅" },
-  { to: "/admin/cobros", label: "Cobros Extraordinarios", icon: "✈️" },
+  { to: "/admin/historial", label: "Historial", icon: "📋" },
+  { to: "/admin/cobros", label: "Extraordinarios", icon: "✈️" },
   { to: "/admin/reportes", label: "Reportes", icon: "📈" },
-  { to: "/admin/admins", label: "Administradores", icon: "🛡️" },
+  { to: "/admin/admins", label: "Admins", icon: "🛡️" },
 ];
 
 export default function AdminSidebar() {
   const navigate = useNavigate();
-
   const handleLogout = async () => {
     await signOut(auth);
     toast.success("Sesión cerrada");
@@ -26,67 +26,40 @@ export default function AdminSidebar() {
   return (
     <aside className="sidebar">
       {/* Logo */}
-      <div style={{
-        padding: "24px 20px",
-        borderBottom: "1px solid #222",
-        background: "var(--verde-oscuro)"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{
-            width: 38, height: 38,
-            background: "var(--verde)",
-            borderRadius: "50%",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "1.2rem", flexShrink: 0
-          }}>🐆</div>
+      <div style={{ padding: "20px 16px", borderBottom: "1px solid #222", background: "var(--verde-oscuro)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 34, height: 34, background: "var(--verde)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem", flexShrink: 0 }}>🐆</div>
           <div>
-            <div style={{ fontFamily: "'Bebas Neue'", fontSize: "1.1rem", letterSpacing: "0.05em" }}>
-              YAGUARES RC
-            </div>
-            <div style={{
-              fontFamily: "'Barlow Condensed'", fontSize: "0.65rem",
-              color: "var(--verde-claro)", letterSpacing: "0.12em",
-              textTransform: "uppercase"
-            }}>Panel Administrativo</div>
+            <div style={{ fontFamily: "'Bebas Neue'", fontSize: "1rem", letterSpacing: "0.05em" }}>YAGUARES RC</div>
+            <div style={{ fontFamily: "'Barlow Condensed'", fontSize: "0.6rem", color: "var(--verde-claro)", letterSpacing: "0.12em", textTransform: "uppercase" }}>Panel Admin</div>
           </div>
         </div>
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: "12px 0" }}>
+      <nav style={{ flex: 1, padding: "8px 0", overflowY: "auto" }}>
         {links.map(link => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            end={link.end}
+          <NavLink key={link.to} to={link.to} end={link.end}
             style={({ isActive }) => ({
-              display: "flex", alignItems: "center", gap: 12,
-              padding: "11px 20px",
-              textDecoration: "none",
-              fontFamily: "'Barlow Condensed'",
-              fontWeight: 600,
-              fontSize: "0.9rem",
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "10px 16px", textDecoration: "none",
+              fontFamily: "'Barlow Condensed'", fontWeight: 600,
+              fontSize: "0.85rem", letterSpacing: "0.06em", textTransform: "uppercase",
               color: isActive ? "white" : "var(--gris-medio)",
               background: isActive ? "var(--verde-oscuro)" : "transparent",
               borderLeft: isActive ? "3px solid var(--verde-claro)" : "3px solid transparent",
               transition: "all 0.15s"
             })}
           >
-            <span style={{ fontSize: "1rem" }}>{link.icon}</span>
+            <span style={{ fontSize: "0.95rem" }}>{link.icon}</span>
             {link.label}
           </NavLink>
         ))}
       </nav>
 
       {/* Logout */}
-      <div style={{ padding: "16px 20px", borderTop: "1px solid #222" }}>
-        <button
-          onClick={handleLogout}
-          className="btn btn-secondary"
-          style={{ width: "100%", justifyContent: "center", fontSize: "0.8rem" }}
-        >
+      <div style={{ padding: "12px 16px", borderTop: "1px solid #222", flexShrink: 0 }}>
+        <button onClick={handleLogout} className="btn btn-secondary" style={{ width: "100%", justifyContent: "center", fontSize: "0.78rem" }}>
           🚪 Cerrar Sesión
         </button>
       </div>
