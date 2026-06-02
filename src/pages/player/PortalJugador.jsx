@@ -7,7 +7,8 @@ import { signOut, updatePassword } from "firebase/auth";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { format, isPast, parseISO } from "date-fns";
+import { format, isPast } from "date-fns";
+import FooterBrand from "../../components/shared/FooterBrand";
 import { es } from "date-fns/locale";
 
 export default function PortalJugador() {
@@ -377,6 +378,7 @@ export default function PortalJugador() {
           </div>
         </div>
       )}
+      <FooterBrand />
     </div>
   );
 }

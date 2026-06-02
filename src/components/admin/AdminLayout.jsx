@@ -3,6 +3,7 @@ import React from "react";
 import { Outlet, Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import AdminSidebar from "./AdminSidebar";
+import FooterBrand from "../shared/FooterBrand";
 
 export default function AdminLayout() {
   const { user, isAdmin, loading } = useAuth();
@@ -25,6 +26,7 @@ export default function AdminLayout() {
       <AdminSidebar />
       <main className="main-content fade-in">
         <Outlet />
+        <FooterBrand />
       </main>
     </div>
   );
