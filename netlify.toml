@@ -1,9 +1,9 @@
-# netlify.toml
 [build]
-  command = "npm run build"
+  command = "npm install && npx react-scripts build"
   publish = "build"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "REACT_APP_FIREBASE_API_KEY,REACT_APP_FIREBASE_APP_ID,REACT_APP_FIREBASE_AUTH_DOMAIN,REACT_APP_FIREBASE_PROJECT_ID,REACT_APP_FIREBASE_SENDER_ID,REACT_APP_FIREBASE_STORAGE_BUCKET"
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+
+[[
