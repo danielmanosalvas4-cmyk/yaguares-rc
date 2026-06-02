@@ -1,8 +1,7 @@
-// src/context/AuthContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { auth, db } from "../config/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 
 const AuthContext = createContext();
 
@@ -23,10 +22,16 @@ export function AuthProvider({ children }) {
           setSocioData(null);
         } else {
           setIsAdmin(false);
-          // Cargar datos del socio
-          const socioDoc = await getDoc(doc(db, "socios", firebaseUser.uid));
-          if (socioDoc.exists()) {
+          // Buscar socio por campo uid
+          const socioQuery = await getDocs(query(
+            collection(db, "socios"),
+            where("uid", "==", firebaseUser.uid)
+          ));
+          if (!socioQuery.empty) {
+            const socioDoc = socioQuery.docs[0];
             setSocioData({ id: socioDoc.id, ...socioDoc.data() });
+          } else {
+            setSocioData(null);
           }
         }
       } else {
