@@ -8,8 +8,8 @@ import { es } from "date-fns/locale";
 import toast from "react-hot-toast";
 import { emailCuotaPendiente } from "../../utils/emailService";
 
-const CATEGORIAS = { infantil: "Infantil", juvenil: "Juvenil", adulto: "Adulto", senior: "Senior" };
-const COLORES_CAT = { infantil: "#5dade2", juvenil: "#bb8fce", adulto: "#1a6b3a", senior: "#c9a84c" };
+const CATEGORIAS = { juvenil: "Juvenil", adulto_mayor: "Adulto Mayor", femenino_juvenil: "Femenino Juvenil", femenino_adulto: "Femenino Adulto" };
+const COLORES_CAT = { juvenil: "#5dade2", adulto_mayor: "#1a6b3a", femenino_juvenil: "#bb8fce", femenino_adulto: "#c9a84c" };
 
 export default function Dashboard() {
   const [stats, setStats] = useState({ socios: 0, pendientes: 0, enRevision: 0, recaudado: 0, vencidos: 0 });

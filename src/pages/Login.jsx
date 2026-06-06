@@ -20,7 +20,7 @@ export default function Login() {
       await signInWithEmailAndPassword(auth, email, password);
       navigate(isAdmin ? "/admin" : "/portal");
     } catch (err) {
-      toast.error("Credenciales incorrectas. Verificá tu email y contraseña.");
+      toast.error("Credenciales incorrectas. Verifica tu email y contraseña.");
     } finally {
       setLoading(false);
     }
@@ -34,28 +34,51 @@ export default function Login() {
       alignItems: "center",
       justifyContent: "center",
       background: "var(--negro)",
-      padding: "24px"
+      padding: "24px",
+      position: "relative",
+      overflow: "hidden"
     }}>
-      {/* Logo / Brand */}
-      <div style={{ textAlign: "center", marginBottom: "40px" }}>
-        <div style={{
-          width: 80, height: 80,
-          background: "var(--verde)",
-          borderRadius: "50%",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          margin: "0 auto 16px",
-          fontSize: "2rem"
-        }}>🐆</div>
-        <h1 style={{ fontSize: "2.8rem", color: "var(--blanco)", lineHeight: 1 }}>
-          YAGUARES RC
-        </h1>
+      {/* Escudo de fondo */}
+      <div style={{
+        position: "absolute",
+        right: -80,
+        bottom: -80,
+        width: 400,
+        height: 400,
+        backgroundImage: "url('/escudo-yaguares.png')",
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+        opacity: 0.06,
+        pointerEvents: "none"
+      }} />
+      <div style={{
+        position: "absolute",
+        left: -80,
+        top: -80,
+        width: 300,
+        height: 300,
+        backgroundImage: "url('/escudo-yaguares.png')",
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+        opacity: 0.04,
+        pointerEvents: "none"
+      }} />
+
+      {/* Logo */}
+      <div style={{ textAlign: "center", marginBottom: "36px", position: "relative" }}>
+        <div style={{ position: "relative", display: "inline-block", marginBottom: 16 }}>
+          <img src="/escudo-yaguares.png" alt="Yaguares RC" style={{ width: 90, height: 90, objectFit: "contain" }} />
+        </div>
+        <h1 style={{ fontSize: "2.8rem", color: "var(--blanco)", lineHeight: 1 }}>YAGUARES RC</h1>
         <p style={{ color: "var(--verde-claro)", fontFamily: "'Barlow Condensed'", letterSpacing: "0.15em", fontSize: "0.85rem", marginTop: 4 }}>
           GUAYAQUIL · ECUADOR
         </p>
       </div>
 
       {/* Card */}
-      <div className="card" style={{ width: "100%", maxWidth: 400 }}>
+      <div className="card" style={{ width: "100%", maxWidth: 400, position: "relative" }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 10,
           marginBottom: 24, paddingBottom: 16,
@@ -74,57 +97,29 @@ export default function Login() {
 
         <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <label className="label" style={{ display: "block", marginBottom: 6, color: "var(--gris-medio)" }}>
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="tucorreo@email.com"
-              required
-            />
+            <label className="label" style={{ display: "block", marginBottom: 6, color: "var(--gris-medio)" }}>Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tucorreo@email.com" required />
           </div>
           <div>
-            <label className="label" style={{ display: "block", marginBottom: 6, color: "var(--gris-medio)" }}>
-              Contraseña
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-            />
+            <label className="label" style={{ display: "block", marginBottom: 6, color: "var(--gris-medio)" }}>Contraseña</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
           </div>
-
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={loading}
-            style={{ width: "100%", justifyContent: "center", marginTop: 8, padding: "13px" }}
-          >
+          <button type="submit" className="btn btn-primary" disabled={loading}
+            style={{ width: "100%", justifyContent: "center", marginTop: 8, padding: "13px" }}>
             {loading ? "Ingresando..." : "Ingresar"}
           </button>
         </form>
 
-        {/* Cambiar rol */}
         <div style={{ marginTop: 20, textAlign: "center" }}>
-          <button
-            onClick={() => navigate(`/login?rol=${isAdmin ? "jugador" : "admin"}`)}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              color: "var(--gris-medio)", fontSize: "0.85rem",
-              fontFamily: "'Barlow'", textDecoration: "underline"
-            }}
-          >
-            {isAdmin ? "¿Sos jugador? Ir al portal" : "¿Sos administrador? Ir al panel admin"}
+          <button onClick={() => navigate(`/login?rol=${isAdmin ? "jugador" : "admin"}`)}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gris-medio)", fontSize: "0.85rem", fontFamily: "'Barlow'", textDecoration: "underline" }}>
+            {isAdmin ? "¿Eres jugador? Ir al portal" : "¿Eres administrador? Ir al panel admin"}
           </button>
         </div>
       </div>
 
-      <p style={{ marginTop: 24, color: "#3a3a3a", fontSize: "0.75rem" }}>
-        Yaguares RC · Sistema de Gestión de Cobros v1.0
+      <p style={{ marginTop: 24, color: "#2a2a2a", fontSize: "0.75rem", position: "relative" }}>
+        Yaguares RC · Sistema de Gestión de Cobros v2.0
       </p>
     </div>
   );

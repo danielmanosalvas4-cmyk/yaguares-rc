@@ -187,23 +187,97 @@ tr:hover td { background: #1e1e1e; }
 
 /* ── MOBILE RESPONSIVE ── */
 @media (max-width: 768px) {
-  .sidebar-desktop { display: none !important; }
-  .mobile-header { display: flex !important; }
-  .mobile-menu { display: block !important; }
+  /* Sidebar mobile */
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+    position: fixed;
+    bottom: 0; top: auto;
+    left: 0; right: 0;
+    flex-direction: row;
+    border-right: none;
+    border-top: 1px solid #222;
+    z-index: 200;
+    padding: 0;
+  }
+  .sidebar nav {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0;
+    flex: 1;
+  }
+  .sidebar nav a {
+    flex-direction: column;
+    gap: 2px !important;
+    padding: 10px 12px !important;
+    font-size: 0.65rem !important;
+    border-left: none !important;
+    border-top: 3px solid transparent;
+    min-width: 60px;
+    text-align: center;
+    justify-content: center;
+  }
+  .sidebar nav a.active,
+  .sidebar nav a[style*="var(--verde-oscuro)"] {
+    border-top: 3px solid var(--verde-claro) !important;
+    border-left: none !important;
+  }
+  .sidebar > div:first-child { display: none; }
+  .sidebar > div:last-child { display: none; }
 
   .main-content {
     margin-left: 0 !important;
-    padding: 72px 12px 24px !important;
+    padding: 16px 12px 80px !important;
   }
 
+  /* Cards grid mobile */
   .mobile-cards { display: block !important; }
   .desktop-table { display: none !important; }
 
+  /* Modals mobile */
+  .card[style*="maxWidth: 520"],
+  .card[style*="maxWidth: 560"],
+  .card[style*="maxWidth: 580"],
+  .card[style*="maxWidth: 480"] {
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 12px 12px 0 0 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    max-height: 90vh !important;
+  }
+
+  /* Typography mobile */
   h1 { font-size: 1.8rem !important; }
   h2 { font-size: 1.4rem !important; }
+
+  /* Grid mobile */
+  div[style*="gridTemplateColumns: '1fr 1fr'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Portal jugador mobile */
+  header { padding: 0 12px !important; }
+  header div:nth-child(2) div:first-child { font-size: 0.82rem !important; }
 }
 
 @media (max-width: 480px) {
   .btn { padding: 9px 14px; font-size: 0.82rem; }
   .card { padding: 14px; }
+}
+
+/* ── MOBILE ADMIN HEADER ── */
+@media (max-width: 768px) {
+  .sidebar { display: none !important; }
+  .sidebar-desktop-wrapper { display: none !important; }
+  .mobile-header-admin { display: flex !important; }
+  .main-content {
+    margin-left: 0 !important;
+    padding: 70px 12px 24px !important;
+  }
+  .mobile-cards { display: block !important; }
+  .desktop-table { display: none !important; }
 }

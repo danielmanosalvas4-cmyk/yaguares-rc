@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { format, isPast } from "date-fns";
 import FooterBrand from "../../components/shared/FooterBrand";
+import FichaJugador from "./FichaJugador";
 import { es } from "date-fns/locale";
 
 export default function PortalJugador() {
@@ -21,7 +22,7 @@ export default function PortalJugador() {
   const [archivo, setArchivo] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
   const [preview, setPreview] = useState(null);
-  const [vista, setVista] = useState("inicio"); // inicio | perfil
+  const [vista, setVista] = useState("inicio"); // inicio | perfil | ficha
   const [nuevaPassword, setNuevaPassword] = useState("");
   const [cambioPass, setCambioPass] = useState(false);
 
@@ -123,7 +124,7 @@ export default function PortalJugador() {
     try { return format(new Date(iso), "d MMM yyyy", { locale: es }); } catch { return iso; }
   };
 
-  const CATEGORIAS = { infantil: "Infantil (Sub-12)", juvenil: "Juvenil (Sub-18)", adulto: "Adulto (Mayor)", senior: "Senior" };
+  const CATEGORIAS = { juvenil: "Juvenil", adulto_mayor: "Adulto Mayor", femenino_juvenil: "Femenino Juvenil", femenino_adulto: "Femenino Adulto Mayor" };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--negro)" }}>
@@ -138,14 +139,16 @@ export default function PortalJugador() {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <span style={{ fontSize: "0.82rem", color: "var(--gris-medio)", display: "none" }} className="hide-mobile">{socioData?.nombre}</span>
-          <button className="btn btn-secondary" style={{ padding: "6px 12px", fontSize: "0.75rem" }} onClick={() => setVista(vista === "perfil" ? "inicio" : "perfil")}>
-            {vista === "perfil" ? "🏠 Inicio" : "👤 Mi Perfil"}
-          </button>
+          <button className="btn btn-secondary" style={{ padding: "6px 12px", fontSize: "0.75rem" }} onClick={() => setVista(vista === "ficha" ? "inicio" : "ficha")}>🏉 Mi Ficha</button>
+          <button className="btn btn-secondary" style={{ padding: "6px 12px", fontSize: "0.75rem" }} onClick={() => setVista(vista === "perfil" ? "inicio" : "perfil")}>{vista !== "inicio" ? "🏠 Inicio" : "👤 Perfil"}</button>
           <button className="btn" style={{ padding: "6px 12px", fontSize: "0.75rem", background: "var(--gris)", color: "var(--gris-medio)" }} onClick={handleLogout}>Salir</button>
         </div>
       </header>
 
       <div style={{ padding: "20px 16px", maxWidth: 860, margin: "0 auto" }}>
+        {/* ── VISTA FICHA ── */}
+        {vista === "ficha" && <FichaJugador onVolver={() => setVista("inicio")} />}
+
 
         {/* ── VISTA PERFIL ── */}
         {vista === "perfil" && (

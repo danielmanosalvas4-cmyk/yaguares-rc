@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { db, auth } from "../../config/firebase";
 import { collection, getDocs, setDoc, doc, deleteDoc } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
 import toast from "react-hot-toast";
 
 export default function Admins() {
@@ -11,6 +11,8 @@ export default function Admins() {
   const [form, setForm] = useState({ nombre: "", email: "", password: "" });
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [cambioPass, setCambioPass] = useState({ actual: "", nueva: "", confirmar: "" });
+  const [cambiandoPass, setCambiandoPass] = useState(false);
 
   useEffect(() => { loadAdmins(); }, []);
 
@@ -22,27 +24,43 @@ export default function Admins() {
   };
 
   const handleCrear = async () => {
-    if (!form.nombre || !form.email || !form.password) {
-      toast.error("Completá todos los campos");
-      return;
-    }
+    if (!form.nombre || !form.email || !form.password) { toast.error("Completa todos los campos"); return; }
     setSaving(true);
     try {
       const cred = await createUserWithEmailAndPassword(auth, form.email, form.password);
       await setDoc(doc(db, "admins", cred.user.uid), {
-        nombre: form.nombre,
-        email: form.email,
+        nombre: form.nombre, email: form.email,
         creadoEn: new Date().toISOString()
       });
       toast.success("Administrador creado correctamente");
       setForm({ nombre: "", email: "", password: "" });
       setShowForm(false);
       loadAdmins();
-    } catch (err) {
-      toast.error("Error: " + err.message);
-    } finally {
-      setSaving(false);
+    } catch (err) { toast.error("Error: " + err.message); }
+    finally { setSaving(false); }
+  };
+
+  const handleCambiarPassword = async () => {
+    if (!cambioPass.actual || !cambioPass.nueva || !cambioPass.confirmar) {
+      toast.error("Completa todos los campos"); return;
     }
+    if (cambioPass.nueva !== cambioPass.confirmar) {
+      toast.error("Las contraseñas nuevas no coinciden"); return;
+    }
+    if (cambioPass.nueva.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres"); return;
+    }
+    setCambiandoPass(true);
+    try {
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, cambioPass.actual);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updatePassword(auth.currentUser, cambioPass.nueva);
+      toast.success("✅ Contraseña actualizada correctamente");
+      setCambioPass({ actual: "", nueva: "", confirmar: "" });
+    } catch (err) {
+      if (err.code === "auth/wrong-password") toast.error("La contraseña actual es incorrecta");
+      else toast.error("Error: " + err.message);
+    } finally { setCambiandoPass(false); }
   };
 
   const eliminar = async (id) => {
@@ -54,19 +72,41 @@ export default function Admins() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1 style={{ fontSize: "2.5rem" }}>ADMINISTRADORES</h1>
-          <p style={{ color: "var(--gris-medio)", marginTop: 4 }}>Gestioná quién tiene acceso al panel administrativo</p>
+          <p style={{ color: "var(--gris-medio)", marginTop: 4 }}>Gestiona el acceso al panel administrativo</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>+ Nuevo Admin</button>
       </div>
 
-      {/* Form */}
+      {/* Cambiar mi contraseña */}
+      <div className="card" style={{ marginBottom: 20, borderLeft: "3px solid var(--dorado)" }}>
+        <h3 style={{ fontSize: "1.1rem", marginBottom: 16 }}>🔒 Cambiar Mi Contraseña</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+          <div>
+            <label className="label" style={{ display: "block", marginBottom: 5, color: "var(--gris-medio)" }}>Contraseña actual</label>
+            <input type="password" value={cambioPass.actual} onChange={e => setCambioPass(p => ({ ...p, actual: e.target.value }))} placeholder="••••••••" />
+          </div>
+          <div>
+            <label className="label" style={{ display: "block", marginBottom: 5, color: "var(--gris-medio)" }}>Nueva contraseña</label>
+            <input type="password" value={cambioPass.nueva} onChange={e => setCambioPass(p => ({ ...p, nueva: e.target.value }))} placeholder="••••••••" />
+          </div>
+          <div>
+            <label className="label" style={{ display: "block", marginBottom: 5, color: "var(--gris-medio)" }}>Confirmar nueva</label>
+            <input type="password" value={cambioPass.confirmar} onChange={e => setCambioPass(p => ({ ...p, confirmar: e.target.value }))} placeholder="••••••••" />
+          </div>
+        </div>
+        <button className="btn btn-gold" onClick={handleCambiarPassword} disabled={cambiandoPass} style={{ marginTop: 14 }}>
+          {cambiandoPass ? "Actualizando..." : "🔒 Actualizar Contraseña"}
+        </button>
+      </div>
+
+      {/* Form nuevo admin */}
       {showForm && (
-        <div className="card" style={{ marginBottom: 24, borderLeft: "3px solid var(--verde)" }}>
-          <h3 style={{ marginBottom: 16, fontSize: "1.2rem" }}>NUEVO ADMINISTRADOR</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+        <div className="card" style={{ marginBottom: 20, borderLeft: "3px solid var(--verde)" }}>
+          <h3 style={{ marginBottom: 16, fontSize: "1.1rem" }}>NUEVO ADMINISTRADOR</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
             <div>
               <label className="label" style={{ display: "block", marginBottom: 5, color: "var(--gris-medio)" }}>Nombre</label>
               <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Nombre completo" />
@@ -80,7 +120,7 @@ export default function Admins() {
               <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Mín. 6 caracteres" />
             </div>
           </div>
-          <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
+          <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
             <button className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancelar</button>
             <button className="btn btn-primary" onClick={handleCrear} disabled={saving}>
               {saving ? "Creando..." : "🛡️ Crear Administrador"}
@@ -91,18 +131,9 @@ export default function Admins() {
 
       {/* Lista */}
       <div className="card table-wrap">
-        {loading ? (
-          <p style={{ color: "var(--gris-medio)", padding: 20 }}>Cargando...</p>
-        ) : (
+        {loading ? <p style={{ color: "var(--gris-medio)", padding: 20 }}>Cargando...</p> : (
           <table>
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th>Creado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Nombre</th><th>Email</th><th>Creado</th><th>Acciones</th></tr></thead>
             <tbody>
               {admins.map(a => (
                 <tr key={a.id}>
@@ -119,14 +150,6 @@ export default function Admins() {
             </tbody>
           </table>
         )}
-      </div>
-
-      <div className="card" style={{ marginTop: 20, background: "#1a2a1a", borderColor: "var(--verde)" }}>
-        <h4 style={{ marginBottom: 8, color: "var(--verde-claro)" }}>⚠️ Nota importante</h4>
-        <p style={{ color: "var(--gris-medio)", fontSize: "0.88rem", lineHeight: 1.6 }}>
-          El primer administrador debe crearse directamente desde <strong>Firebase Console → Authentication</strong> y luego agregar su UID en la colección <code style={{ background: "#2a2a2a", padding: "1px 6px", borderRadius: 3 }}>admins</code> de Firestore manualmente.
-          Los siguientes administradores pueden crearse desde acá.
-        </p>
       </div>
     </div>
   );

@@ -6,13 +6,13 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import toast from "react-hot-toast";
 
 const CATEGORIAS = [
-  { id: "infantil", label: "Infantil (Sub-12)", cuota: 20 },
-  { id: "juvenil", label: "Juvenil (Sub-18)", cuota: 30 },
-  { id: "adulto", label: "Adulto (Mayor)", cuota: 45 },
-  { id: "senior", label: "Senior", cuota: 35 },
+  { id: "juvenil", label: "Juvenil" },
+  { id: "adulto_mayor", label: "Adulto Mayor" },
+  { id: "femenino_juvenil", label: "Femenino Juvenil" },
+  { id: "femenino_adulto", label: "Femenino Adulto Mayor" },
 ];
 
-const EMPTY = { nombre: "", apellido: "", email: "", telefono: "", cedula: "", categoria: "adulto", cuotaMensual: 45, activo: true, password: "" };
+const EMPTY = { nombre: "", apellido: "", email: "", telefono: "", cedula: "", categoria: "adulto_mayor", cuotaMensual: 0, activo: true, password: "" };
 
 export default function Socios() {
   const [socios, setSocios] = useState([]);

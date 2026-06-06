@@ -12,6 +12,9 @@ import CobrosExtraordinarios from "./pages/admin/CobrosExtraordinarios";
 import Reportes from "./pages/admin/Reportes";
 import Admins from "./pages/admin/Admins";
 import HistorialSocio from "./pages/admin/HistorialSocio";
+import PagosHistoricos from "./pages/admin/PagosHistoricos";
+import PagoAnual from "./pages/admin/PagoAnual";
+import FichasAdmin from "./pages/admin/FichasAdmin";
 import PortalJugador from "./pages/player/PortalJugador";
 import AdminLayout from "./components/admin/AdminLayout";
 import PlayerLayout from "./components/player/PlayerLayout";
@@ -33,6 +36,9 @@ export default function App() {
             <Route path="socios" element={<Socios />} />
             <Route path="pagos" element={<ValidarPagos />} />
             <Route path="historial" element={<HistorialSocio />} />
+            <Route path="historicos" element={<PagosHistoricos />} />
+            <Route path="anual" element={<PagoAnual />} />
+            <Route path="fichas" element={<FichasAdmin />} />
             <Route path="cobros" element={<CobrosExtraordinarios />} />
             <Route path="reportes" element={<Reportes />} />
             <Route path="admins" element={<Admins />} />
