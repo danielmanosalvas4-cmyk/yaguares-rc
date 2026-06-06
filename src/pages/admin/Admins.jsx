@@ -25,18 +25,41 @@ export default function Admins() {
 
   const handleCrear = async () => {
     if (!form.nombre || !form.email || !form.password) { toast.error("Completa todos los campos"); return; }
+    if (form.password.length < 6) { toast.error("La contraseña debe tener al menos 6 caracteres"); return; }
     setSaving(true);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, form.email, form.password);
-      await setDoc(doc(db, "admins", cred.user.uid), {
-        nombre: form.nombre, email: form.email,
+      // Usar la API REST de Firebase para crear el usuario SIN cambiar la sesión actual
+      const apiKey = process.env.REACT_APP_FIREBASE_API_KEY;
+      const response = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: form.email,
+            password: form.password,
+            returnSecureToken: true
+          })
+        }
+      );
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+
+      // Guardar en Firestore con el UID del nuevo admin
+      await setDoc(doc(db, "admins", data.localId), {
+        nombre: form.nombre,
+        email: form.email,
         creadoEn: new Date().toISOString()
       });
-      toast.success("Administrador creado correctamente");
+
+      toast.success("✅ Administrador creado correctamente");
       setForm({ nombre: "", email: "", password: "" });
       setShowForm(false);
       loadAdmins();
-    } catch (err) { toast.error("Error: " + err.message); }
+    } catch (err) {
+      if (err.message === "EMAIL_EXISTS") toast.error("Ese email ya está registrado");
+      else toast.error("Error: " + err.message);
+    }
     finally { setSaving(false); }
   };
 
