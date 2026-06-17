@@ -1,8 +1,7 @@
 // src/pages/admin/Socios.jsx
 import React, { useEffect, useState } from "react";
-import { db, auth } from "../../config/firebase";
+import { db } from "../../config/firebase";
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
 import toast from "react-hot-toast";
 
 const CATEGORIAS = [
@@ -36,12 +35,11 @@ export default function Socios() {
   const openEdit = (s) => { setForm({ ...s, password: "" }); setEditId(s.id); setModal(true); };
 
   const handleCategoriaChange = (cat) => {
-    const found = CATEGORIAS.find(c => c.id === cat);
-    setForm(f => ({ ...f, categoria: cat, cuotaMensual: found?.cuota || 0 }));
+    setForm(f => ({ ...f, categoria: cat }));
   };
 
   const handleSave = async () => {
-    if (!form.nombre || !form.apellido || !form.email) { toast.error("Completá nombre, apellido y email"); return; }
+    if (!form.nombre || !form.apellido || !form.email) { toast.error("Completa nombre, apellido y email"); return; }
     setSaving(true);
     try {
       if (editId) {
@@ -52,18 +50,39 @@ export default function Socios() {
         });
         toast.success("Socio actualizado");
       } else {
-        const cred = await createUserWithEmailAndPassword(auth, form.email, form.password || "yaguares2024");
+        // Usar API REST para crear usuario sin cambiar sesión activa
+        const apiKey = process.env.REACT_APP_FIREBASE_API_KEY;
+        const response = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: form.email,
+              password: form.password || "yaguares2024",
+              returnSecureToken: true
+            })
+          }
+        );
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+
         await addDoc(collection(db, "socios"), {
-          uid: cred.user.uid, nombre: form.nombre, apellido: form.apellido,
-          email: form.email, telefono: form.telefono, cedula: form.cedula,
-          categoria: form.categoria, cuotaMensual: Number(form.cuotaMensual),
+          uid: data.localId,
+          nombre: form.nombre, apellido: form.apellido,
+          email: form.email, telefono: form.telefono,
+          cedula: form.cedula, categoria: form.categoria,
+          cuotaMensual: Number(form.cuotaMensual),
           activo: true, creadoEn: serverTimestamp()
         });
-        toast.success(`Socio creado. Contraseña: ${form.password || "yaguares2024"}`);
+        toast.success(`✅ Socio creado. Contraseña: ${form.password || "yaguares2024"}`);
       }
       setModal(false);
       loadSocios();
-    } catch (err) { toast.error(err.message || "Error al guardar"); }
+    } catch (err) {
+      if (err.message === "EMAIL_EXISTS") toast.error("Ese email ya está registrado");
+      else toast.error(err.message || "Error al guardar");
+    }
     finally { setSaving(false); }
   };
 
@@ -99,7 +118,7 @@ export default function Socios() {
       </div>
 
       {/* Mobile cards */}
-      <div style={{ display: "none" }} className="mobile-cards">
+      <div className="mobile-cards" style={{ display: "none" }}>
         {filtered.map(s => (
           <div key={s.id} className="card" style={{ marginBottom: 12, borderLeft: `3px solid ${s.activo ? "var(--verde)" : "var(--gris-medio)"}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -128,15 +147,7 @@ export default function Socios() {
         {loading ? <p style={{ color: "var(--gris-medio)", padding: 20 }}>Cargando...</p> : (
           <table>
             <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Categoría</th>
-                <th>Cuota</th>
-                <th>Email</th>
-                <th>Teléfono</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
+              <tr><th>Nombre</th><th>Categoría</th><th>Cuota</th><th>Email</th><th>Teléfono</th><th>Estado</th><th>Acciones</th></tr>
             </thead>
             <tbody>
               {filtered.map(s => (
