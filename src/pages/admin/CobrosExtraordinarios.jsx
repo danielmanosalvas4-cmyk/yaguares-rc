@@ -99,6 +99,8 @@ export default function CobrosExtraordinarios() {
 
       const cuentaDestino = form.cuentaNombre ? {
         nombre: form.cuentaNombre,
+        cedula: form.cuentaCedula,
+        email: form.cuentaEmail,
         banco: form.cuentaBanco,
         numero: form.cuentaNumero,
         tipo: form.cuentaTipo
@@ -217,6 +219,8 @@ export default function CobrosExtraordinarios() {
                 <div className="label" style={{ color: "var(--verde-claro)", marginBottom: 6 }}>🏦 CUENTA DE DESTINO</div>
                 <div style={{ fontSize: "0.88rem" }}>
                   <div><strong>Titular:</strong> {detalle.cuentaDestino.nombre}</div>
+                  <div><strong>Cédula/RUC:</strong> {detalle.cuentaDestino.cedula}</div>
+                  <div><strong>Email:</strong> {detalle.cuentaDestino.email}</div>
                   <div><strong>Banco:</strong> {detalle.cuentaDestino.banco}</div>
                   <div><strong>Número:</strong> {detalle.cuentaDestino.numero}</div>
                   <div><strong>Tipo:</strong> {detalle.cuentaDestino.tipo}</div>
