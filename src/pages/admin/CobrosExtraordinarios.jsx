@@ -22,7 +22,7 @@ export default function CobrosExtraordinarios() {
     sociosSeleccionados: [],
     montoBase: "",
     // Cuenta de destino
-    cuentaNombre: "", cuentaBanco: "", cuentaNumero: "", cuentaTipo: "corriente"
+    cuentaNombre: "", cuentaCedula: "", cuentaEmail: "", cuentaBanco: "", cuentaNumero: "", cuentaTipo: "corriente"
   });
 
   useEffect(() => { loadData(); }, []);
@@ -128,7 +128,7 @@ export default function CobrosExtraordinarios() {
 
       toast.success(`✈️ Cobro creado y asignado a ${asignados.length} socios`);
       setModal(false);
-      setForm({ titulo: "", descripcion: "", fechaLimite: "", asignacion: "todos", categorias: [], sociosSeleccionados: [], montoBase: "", cuentaNombre: "", cuentaBanco: "", cuentaNumero: "", cuentaTipo: "corriente" });
+      setForm({ titulo: "", descripcion: "", fechaLimite: "", asignacion: "todos", categorias: [], sociosSeleccionados: [], montoBase: "", cuentaNombre: "", cuentaCedula: "", cuentaEmail: "", cuentaBanco: "", cuentaNumero: "", cuentaTipo: "corriente" });
       loadData();
     } catch (err) {
       toast.error("Error: " + err.message);
@@ -283,6 +283,14 @@ export default function CobrosExtraordinarios() {
                   <div style={{ gridColumn: "span 2" }}>
                     <label className="label" style={{ display: "block", marginBottom: 5, color: "var(--gris-medio)" }}>Nombre del titular</label>
                     <input value={form.cuentaNombre} onChange={e => setForm(f => ({ ...f, cuentaNombre: e.target.value }))} placeholder="Ej: Carlos Rodríguez" />
+                  </div>
+                  <div>
+                    <label className="label" style={{ display: "block", marginBottom: 5, color: "var(--gris-medio)" }}>Cédula / RUC</label>
+                    <input value={form.cuentaCedula || ""} onChange={e => setForm(f => ({ ...f, cuentaCedula: e.target.value }))} placeholder="0912345678" />
+                  </div>
+                  <div>
+                    <label className="label" style={{ display: "block", marginBottom: 5, color: "var(--gris-medio)" }}>Email del titular</label>
+                    <input type="email" value={form.cuentaEmail || ""} onChange={e => setForm(f => ({ ...f, cuentaEmail: e.target.value }))} placeholder="titular@email.com" />
                   </div>
                   <div>
                     <label className="label" style={{ display: "block", marginBottom: 5, color: "var(--gris-medio)" }}>Banco</label>
