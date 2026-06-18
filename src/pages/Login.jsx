@@ -1,8 +1,9 @@
 // src/pages/Login.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { auth } from "../config/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 
 export default function Login() {
@@ -12,65 +13,42 @@ export default function Login() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const isAdmin = params.get("rol") === "admin";
+  const { user, isAdmin: esAdmin, rolDeterminado } = useAuth();
+
+  // Redirigir solo cuando el rol ya está determinado
+  useEffect(() => {
+    if (user && rolDeterminado) {
+      if (esAdmin) navigate("/admin", { replace: true });
+      else navigate("/portal", { replace: true });
+    }
+  }, [user, esAdmin, rolDeterminado]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      navigate(isAdmin ? "/admin" : "/portal");
+      // La redirección la maneja el useEffect cuando rolDeterminado sea true
     } catch (err) {
       toast.error("Credenciales incorrectas. Verifica tu email y contraseña.");
-    } finally {
       setLoading(false);
     }
   };
 
   return (
     <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "var(--negro)",
-      padding: "24px",
-      position: "relative",
-      overflow: "hidden"
+      minHeight: "100vh", display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      background: "var(--negro)", padding: "24px",
+      position: "relative", overflow: "hidden"
     }}>
-      {/* Escudo de fondo */}
-      <div style={{
-        position: "absolute",
-        right: -80,
-        bottom: -80,
-        width: 400,
-        height: 400,
-        backgroundImage: "url('/escudo-yaguares.png')",
-        backgroundSize: "contain",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center",
-        opacity: 0.06,
-        pointerEvents: "none"
-      }} />
-      <div style={{
-        position: "absolute",
-        left: -80,
-        top: -80,
-        width: 300,
-        height: 300,
-        backgroundImage: "url('/escudo-yaguares.png')",
-        backgroundSize: "contain",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center",
-        opacity: 0.04,
-        pointerEvents: "none"
-      }} />
+      {/* Escudo fondo */}
+      <div style={{ position: "absolute", right: -80, bottom: -80, width: 400, height: 400, backgroundImage: "url('/escudo-yaguares.png')", backgroundSize: "contain", backgroundRepeat: "no-repeat", opacity: 0.06, pointerEvents: "none" }} />
+      <div style={{ position: "absolute", left: -80, top: -80, width: 300, height: 300, backgroundImage: "url('/escudo-yaguares.png')", backgroundSize: "contain", backgroundRepeat: "no-repeat", opacity: 0.04, pointerEvents: "none" }} />
 
       {/* Logo */}
       <div style={{ textAlign: "center", marginBottom: "36px", position: "relative" }}>
-        <div style={{ position: "relative", display: "inline-block", marginBottom: 16 }}>
-          <img src="/escudo-yaguares.png" alt="Yaguares RC" style={{ width: 90, height: 90, objectFit: "contain" }} />
-        </div>
+        <img src="/escudo-yaguares.png" alt="Yaguares RC" style={{ width: 90, height: 90, objectFit: "contain", marginBottom: 16 }} />
         <h1 style={{ fontSize: "2.8rem", color: "var(--blanco)", lineHeight: 1 }}>YAGUARES RC</h1>
         <p style={{ color: "var(--verde-claro)", fontFamily: "'Barlow Condensed'", letterSpacing: "0.15em", fontSize: "0.85rem", marginTop: 4 }}>
           GUAYAQUIL · ECUADOR
@@ -79,11 +57,7 @@ export default function Login() {
 
       {/* Card */}
       <div className="card" style={{ width: "100%", maxWidth: 400, position: "relative" }}>
-        <div style={{
-          display: "flex", alignItems: "center", gap: 10,
-          marginBottom: 24, paddingBottom: 16,
-          borderBottom: "1px solid #2a2a2a"
-        }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, paddingBottom: 16, borderBottom: "1px solid #2a2a2a" }}>
           <div style={{
             background: isAdmin ? "var(--verde-oscuro)" : "#1a2a4a",
             padding: "6px 12px", borderRadius: 4,
@@ -106,7 +80,7 @@ export default function Login() {
           </div>
           <button type="submit" className="btn btn-primary" disabled={loading}
             style={{ width: "100%", justifyContent: "center", marginTop: 8, padding: "13px" }}>
-            {loading ? "Ingresando..." : "Ingresar"}
+            {loading ? "Verificando..." : "Ingresar"}
           </button>
         </form>
 
@@ -118,7 +92,7 @@ export default function Login() {
         </div>
       </div>
 
-      <p style={{ marginTop: 24, color: "#2a2a2a", fontSize: "0.75rem", position: "relative" }}>
+      <p style={{ marginTop: 24, color: "#2a2a2a", fontSize: "0.75rem" }}>
         Yaguares RC · Sistema de Gestión de Cobros v2.0
       </p>
     </div>
