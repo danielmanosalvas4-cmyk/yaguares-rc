@@ -1,16 +1,17 @@
 // src/pages/admin/ValidarPagos.jsx
 import React, { useEffect, useState } from "react";
 import { db } from "../../config/firebase";
-import { collection, getDocs, updateDoc, doc, query, orderBy, where } from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc, query, orderBy, where, addDoc, serverTimestamp } from "firebase/firestore";
+import { useAuth } from "../../context/AuthContext";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { emailPagoAprobado, emailPagoRechazado } from "../../utils/emailService";
 import { generarReciboPDF } from "../../utils/pdfRecibo";
 
 const FILTROS = ["todos", "revision", "pendiente", "aprobado", "rechazado", "vencido"];
 
 export default function ValidarPagos() {
+  const { user } = useAuth();
   const [pagos, setPagos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState("revision");
@@ -31,21 +32,27 @@ export default function ValidarPagos() {
     setLoading(false);
   };
 
+  const registrarAuditoria = async (accion, detalle) => {
+    try {
+      await addDoc(collection(db, "auditoria"), {
+        accion, detalle,
+        adminUid: user?.uid || "desconocido",
+        adminEmail: user?.email || "desconocido",
+        fecha: serverTimestamp()
+      });
+    } catch (err) { console.error("Error auditoria:", err); }
+  };
+
   const aprobar = async (pago) => {
     setProcesando(true);
     try {
       await updateDoc(doc(db, "pagos", pago.id), {
-        estado: "aprobado",
-        fechaAprobacion: new Date().toISOString(),
-        fechaPago: new Date().toISOString(),
-        notaAdmin: ""
+        estado: "aprobado", fechaAprobacion: new Date().toISOString(),
+        fechaPago: new Date().toISOString(), notaAdmin: "",
+        aprobadoPor: user?.email || "admin"
       });
-      // Enviar email de confirmación
-      await emailPagoAprobado(
-        { nombre: pago.socioNombre, apellido: "", email: pago.socioEmail },
-        pago.monto, pago.concepto
-      );
-      toast.success(`✅ Pago aprobado. Email enviado a ${pago.socioEmail}`);
+      await registrarAuditoria("PAGO_APROBADO", `Pago de ${pago.socioNombre} por $${pago.monto?.toFixed(2)} — ${pago.concepto}`);
+      toast.success(`✅ Pago de ${pago.socioNombre} aprobado`);
       setPagoSel(null);
       loadPagos();
     } catch { toast.error("Error al aprobar"); }
@@ -53,21 +60,17 @@ export default function ValidarPagos() {
   };
 
   const rechazar = async (pago) => {
-    if (!notaRechazo.trim()) { toast.error("Escribí el motivo del rechazo"); return; }
+    if (!notaRechazo.trim()) { toast.error("Escribe el motivo del rechazo"); return; }
     setProcesando(true);
     try {
       await updateDoc(doc(db, "pagos", pago.id), {
-        estado: "rechazado",
-        notaAdmin: notaRechazo,
-        fechaRechazo: new Date().toISOString()
+        estado: "rechazado", notaAdmin: notaRechazo,
+        fechaRechazo: new Date().toISOString(),
+        rechazadoPor: user?.email || "admin"
       });
-      await emailPagoRechazado(
-        { nombre: pago.socioNombre, apellido: "", email: pago.socioEmail },
-        pago.monto, pago.concepto, notaRechazo
-      );
-      toast.success("Pago rechazado y email enviado al socio");
-      setNotaRechazo("");
-      setPagoSel(null);
+      await registrarAuditoria("PAGO_RECHAZADO", `Pago de ${pago.socioNombre} rechazado — Motivo: ${notaRechazo}`);
+      toast.success("Pago rechazado");
+      setNotaRechazo(""); setPagoSel(null);
       loadPagos();
     } catch { toast.error("Error al rechazar"); }
     finally { setProcesando(false); }
@@ -107,10 +110,9 @@ export default function ValidarPagos() {
             </span>
           )}
         </div>
-        <p style={{ color: "var(--gris-medio)", marginTop: 4 }}>Al aprobar se envía email automático al socio</p>
+        <p style={{ color: "var(--gris-medio)", marginTop: 4 }}>Las aprobaciones y rechazos quedan registrados en Auditoría</p>
       </div>
 
-      {/* Filtros */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
         {FILTROS.map(f => (
           <button key={f} onClick={() => setFiltro(f)} className="btn"
@@ -121,7 +123,7 @@ export default function ValidarPagos() {
       </div>
 
       {/* Mobile cards */}
-      <div className="mobile-cards">
+      <div className="mobile-cards" style={{ display: "none" }}>
         {loading ? <p style={{ color: "var(--gris-medio)" }}>Cargando...</p> :
           pagos.length === 0 ? (
             <div style={{ textAlign: "center", padding: 40 }}>
@@ -137,9 +139,7 @@ export default function ValidarPagos() {
               <div style={{ fontSize: "0.82rem", color: "var(--gris-medio)", marginBottom: 6 }}>{p.concepto}</div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 {estadoBadge(p.estado)}
-                <button className="btn btn-secondary" style={{ padding: "5px 12px", fontSize: "0.75rem" }} onClick={() => { setPagoSel(p); setNotaRechazo(""); }}>
-                  Ver detalle
-                </button>
+                <button className="btn btn-secondary" style={{ padding: "5px 12px", fontSize: "0.75rem" }} onClick={() => { setPagoSel(p); setNotaRechazo(""); }}>Ver</button>
               </div>
             </div>
           ))
@@ -171,7 +171,7 @@ export default function ValidarPagos() {
                       {p.tipo === "extraordinario" && <span className="badge badge-extraordinario">✈️ Extra</span>}
                     </td>
                     <td style={{ color: "var(--dorado)", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: "1.1rem" }}>${p.monto?.toFixed(2)}</td>
-                    <td style={{ fontSize: "0.85rem" }}>{p.metodoPago === "comprobante" ? "📎 Comprobante" : p.metodoPago === "tarjeta" ? "💳 Tarjeta" : "—"}</td>
+                    <td style={{ fontSize: "0.85rem" }}>{p.metodoPago === "comprobante" ? "📎" : p.metodoPago === "tarjeta" ? "💳" : "—"}</td>
                     <td style={{ color: "var(--gris-medio)", fontSize: "0.82rem" }}>{formatFecha(p.creadoEn?.toDate?.() || p.creadoEn)}</td>
                     <td>{estadoBadge(p.estado)}</td>
                     <td>
@@ -198,14 +198,13 @@ export default function ValidarPagos() {
               <h2 style={{ fontSize: "1.6rem" }}>DETALLE DEL PAGO</h2>
               <button onClick={() => setPagoSel(null)} style={{ background: "none", border: "none", color: "var(--gris-medio)", cursor: "pointer", fontSize: "1.5rem" }}>✕</button>
             </div>
-
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
               {[
                 { label: "Socio", value: pagoSel.socioNombre },
                 { label: "Email", value: pagoSel.socioEmail },
                 { label: "Concepto", value: pagoSel.concepto },
                 { label: "Monto", value: `$${pagoSel.monto?.toFixed(2)}` },
-                { label: "Método", value: pagoSel.metodoPago },
+                { label: "Método", value: pagoSel.metodoPago || "—" },
                 { label: "Fecha envío", value: formatFecha(pagoSel.creadoEn?.toDate?.() || pagoSel.creadoEn) },
               ].map(f => (
                 <div key={f.label}>
@@ -214,25 +213,23 @@ export default function ValidarPagos() {
                 </div>
               ))}
             </div>
-
+            {pagoSel.aprobadoPor && <div style={{ color: "var(--gris-medio)", fontSize: "0.82rem", marginBottom: 12 }}>✅ Aprobado por: {pagoSel.aprobadoPor}</div>}
+            {pagoSel.rechazadoPor && <div style={{ color: "var(--gris-medio)", fontSize: "0.82rem", marginBottom: 12 }}>❌ Rechazado por: {pagoSel.rechazadoPor}</div>}
             {pagoSel.comprobanteUrl && (
               <div style={{ marginBottom: 20 }}>
-                <div className="label" style={{ color: "var(--gris-medio)", marginBottom: 8 }}>Comprobante Adjunto</div>
+                <div className="label" style={{ color: "var(--gris-medio)", marginBottom: 8 }}>Comprobante</div>
                 <a href={pagoSel.comprobanteUrl} target="_blank" rel="noreferrer">
                   <img src={pagoSel.comprobanteUrl} alt="Comprobante" style={{ width: "100%", borderRadius: 8, border: "1px solid #333" }} onError={e => { e.target.style.display = "none"; }} />
                 </a>
                 <a href={pagoSel.comprobanteUrl} target="_blank" rel="noreferrer" style={{ color: "var(--verde-claro)", fontSize: "0.85rem", display: "block", marginTop: 6 }}>🔗 Abrir en nueva pestaña</a>
               </div>
             )}
-
             {pagoSel.notaAdmin && (
               <div style={{ background: "#3d0f0f", borderRadius: 6, padding: 12, marginBottom: 16 }}>
                 <div className="label" style={{ color: "#ec7063", marginBottom: 4 }}>Nota</div>
                 <div style={{ fontSize: "0.9rem" }}>{pagoSel.notaAdmin}</div>
               </div>
             )}
-
-            {/* Acciones */}
             {(pagoSel.estado === "revision" || pagoSel.estado === "pendiente") && (
               <div>
                 <div style={{ marginBottom: 12 }}>
@@ -241,11 +238,10 @@ export default function ValidarPagos() {
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button className="btn btn-danger" style={{ flex: 1, justifyContent: "center" }} onClick={() => rechazar(pagoSel)} disabled={procesando}>❌ Rechazar</button>
-                  <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center" }} onClick={() => aprobar(pagoSel)} disabled={procesando}>✅ Aprobar y Notificar</button>
+                  <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center" }} onClick={() => aprobar(pagoSel)} disabled={procesando}>✅ Aprobar</button>
                 </div>
               </div>
             )}
-
             {pagoSel.estado === "aprobado" && (
               <div>
                 <div style={{ background: "#0f3020", borderRadius: 8, padding: 14, textAlign: "center", marginBottom: 12 }}>

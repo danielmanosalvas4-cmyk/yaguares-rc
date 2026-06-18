@@ -1,29 +1,33 @@
 // src/pages/admin/CobrosExtraordinarios.jsx
 import React, { useEffect, useState } from "react";
 import { db } from "../../config/firebase";
-import { collection, getDocs, addDoc, serverTimestamp, doc, deleteDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, addDoc, serverTimestamp, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { useAuth } from "../../context/AuthContext";
 import toast from "react-hot-toast";
 
 const CATEGORIAS = ["juvenil", "adulto", "femenino_juvenil", "femenino_adulto"];
 const BANCOS_EC = ["Banco Pichincha", "Banco Guayaquil", "Produbanco", "Banco del Pacífico", "Banco Internacional", "Banco Bolivariano", "DeUna / Pichincha", "Otro"];
 
 export default function CobrosExtraordinarios() {
+  const { user } = useAuth();
   const [cobros, setCobros] = useState([]);
   const [socios, setSocios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [detalle, setDetalle] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [modalAgregar, setModalAgregar] = useState(null); // cobro al que agregar jugadores
 
   const [form, setForm] = useState({
     titulo: "", descripcion: "", fechaLimite: "",
-    asignacion: "todos",
-    categorias: [],
-    sociosSeleccionados: [],
-    montoBase: "",
-    // Cuenta de destino
+    asignacion: "todos", categorias: [], sociosSeleccionados: [], montoBase: "",
     cuentaNombre: "", cuentaCedula: "", cuentaEmail: "", cuentaBanco: "", cuentaNumero: "", cuentaTipo: "corriente"
   });
+
+  // Para agregar jugadores a cobro existente
+  const [sociosAAgregar, setSociosAAgregar] = useState([]);
+  const [montoExtra, setMontoExtra] = useState("");
+  const [agregando, setAgregando] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -47,10 +51,7 @@ export default function CobrosExtraordinarios() {
   };
 
   const toggleCategoria = (cat) => {
-    setForm(f => ({
-      ...f,
-      categorias: f.categorias.includes(cat) ? f.categorias.filter(c => c !== cat) : [...f.categorias, cat]
-    }));
+    setForm(f => ({ ...f, categorias: f.categorias.includes(cat) ? f.categorias.filter(c => c !== cat) : [...f.categorias, cat] }));
   };
 
   const setSocioMonto = (socioId, monto) => {
@@ -69,77 +70,116 @@ export default function CobrosExtraordinarios() {
     });
   };
 
+  const registrarAuditoria = async (accion, detalle) => {
+    try {
+      await addDoc(collection(db, "auditoria"), {
+        accion, detalle,
+        adminUid: user?.uid || "desconocido",
+        adminEmail: user?.email || "desconocido",
+        fecha: serverTimestamp()
+      });
+    } catch (err) { console.error("Error auditoria:", err); }
+  };
+
   const handleCrear = async () => {
     if (!form.titulo) { toast.error("El título es requerido"); return; }
-
     setSaving(true);
     try {
       let asignados = [];
       if (form.asignacion === "todos" || form.asignacion === "categoria") {
         asignados = sociosFiltrados().map(s => ({
-          socioId: s.uid || s.id,
-          socioNombre: `${s.nombre} ${s.apellido}`,
-          socioEmail: s.email,
-          monto: Number(form.montoBase),
-          estado: "pendiente"
+          socioId: s.uid || s.id, socioNombre: `${s.nombre} ${s.apellido}`,
+          socioEmail: s.email, monto: Number(form.montoBase), estado: "pendiente"
         }));
       } else {
         const seleccionados = socios.filter(s => form.sociosSeleccionados.find(ss => ss.socioId === s.id));
         asignados = seleccionados.map(s => {
           const sel = form.sociosSeleccionados.find(ss => ss.socioId === s.id);
-          return {
-            socioId: s.uid || s.id,
-            socioNombre: `${s.nombre} ${s.apellido}`,
-            socioEmail: s.email,
-            monto: Number(sel?.monto || form.montoBase || 0),
-            estado: "pendiente"
-          };
+          return { socioId: s.uid || s.id, socioNombre: `${s.nombre} ${s.apellido}`, socioEmail: s.email, monto: Number(sel?.monto || form.montoBase || 0), estado: "pendiente" };
         });
       }
 
       const cuentaDestino = form.cuentaNombre ? {
-        nombre: form.cuentaNombre,
-        cedula: form.cuentaCedula,
-        email: form.cuentaEmail,
-        banco: form.cuentaBanco,
-        numero: form.cuentaNumero,
-        tipo: form.cuentaTipo
+        nombre: form.cuentaNombre || "", cedula: form.cuentaCedula || "",
+        email: form.cuentaEmail || "", banco: form.cuentaBanco || "",
+        numero: form.cuentaNumero || "", tipo: form.cuentaTipo || "corriente"
       } : null;
 
-      await addDoc(collection(db, "cobros"), {
-        titulo: form.titulo, descripcion: form.descripcion,
-        fechaLimite: form.fechaLimite, asignacion: form.asignacion,
-        categorias: form.categorias, asignados,
-        montoBase: Number(form.montoBase),
-        cuentaDestino,
-        activo: true, creadoEn: serverTimestamp()
+      const cobroRef = await addDoc(collection(db, "cobros"), {
+        titulo: form.titulo, descripcion: form.descripcion, fechaLimite: form.fechaLimite,
+        asignacion: form.asignacion, categorias: form.categorias, asignados,
+        montoBase: Number(form.montoBase), cuentaDestino, activo: true, creadoEn: serverTimestamp()
       });
 
       for (const a of asignados) {
         await addDoc(collection(db, "pagos"), {
           socioId: a.socioId, socioNombre: a.socioNombre, socioEmail: a.socioEmail,
-          concepto: form.titulo, descripcion: form.descripcion,
-          monto: a.monto, tipo: "extraordinario", estado: "pendiente",
-          metodoPago: null, comprobanteUrl: null,
-          cuentaDestino,
-          creadoEn: serverTimestamp()
+          concepto: form.titulo, descripcion: form.descripcion, monto: a.monto,
+          tipo: "extraordinario", estado: "pendiente", metodoPago: null, comprobanteUrl: null,
+          cuentaDestino, cobroId: cobroRef.id, creadoEn: serverTimestamp()
         });
       }
 
+      await registrarAuditoria("COBRO_CREADO", `Cobro "${form.titulo}" creado y asignado a ${asignados.length} socios`);
       toast.success(`✈️ Cobro creado y asignado a ${asignados.length} socios`);
       setModal(false);
       setForm({ titulo: "", descripcion: "", fechaLimite: "", asignacion: "todos", categorias: [], sociosSeleccionados: [], montoBase: "", cuentaNombre: "", cuentaCedula: "", cuentaEmail: "", cuentaBanco: "", cuentaNumero: "", cuentaTipo: "corriente" });
       loadData();
-    } catch (err) {
-      toast.error("Error: " + err.message);
-    } finally { setSaving(false); }
+    } catch (err) { toast.error("Error: " + err.message); }
+    finally { setSaving(false); }
   };
 
-  const eliminarCobro = async (id) => {
+  // Agregar jugadores a cobro existente
+  const handleAgregarJugadores = async () => {
+    if (sociosAAgregar.length === 0) { toast.error("Selecciona al menos un jugador"); return; }
+    setAgregando(true);
+    try {
+      const cobro = modalAgregar;
+      const cuentaDestino = cobro.cuentaDestino || null;
+      const nuevosAsignados = [...(cobro.asignados || [])];
+      let agregados = 0;
+
+      for (const socioId of sociosAAgregar) {
+        // Verificar que no esté ya asignado
+        const yaAsignado = nuevosAsignados.find(a => a.socioId === socioId);
+        if (yaAsignado) continue;
+
+        const socio = socios.find(s => s.uid === socioId || s.id === socioId);
+        if (!socio) continue;
+
+        const monto = Number(montoExtra || cobro.montoBase || 0);
+        nuevosAsignados.push({ socioId, socioNombre: `${socio.nombre} ${socio.apellido}`, socioEmail: socio.email, monto, estado: "pendiente" });
+
+        await addDoc(collection(db, "pagos"), {
+          socioId, socioNombre: `${socio.nombre} ${socio.apellido}`, socioEmail: socio.email,
+          concepto: cobro.titulo, descripcion: cobro.descripcion || "", monto,
+          tipo: "extraordinario", estado: "pendiente", metodoPago: null, comprobanteUrl: null,
+          cuentaDestino, cobroId: cobro.id, creadoEn: serverTimestamp()
+        });
+        agregados++;
+      }
+
+      await updateDoc(doc(db, "cobros", cobro.id), { asignados: nuevosAsignados });
+      await registrarAuditoria("JUGADORES_AGREGADOS", `${agregados} jugadores agregados al cobro "${cobro.titulo}"`);
+      toast.success(`✅ ${agregados} jugador${agregados > 1 ? "es" : ""} agregado${agregados > 1 ? "s" : ""} al cobro`);
+      setModalAgregar(null); setSociosAAgregar([]); setMontoExtra("");
+      loadData();
+    } catch (err) { toast.error("Error: " + err.message); }
+    finally { setAgregando(false); }
+  };
+
+  const eliminarCobro = async (id, titulo) => {
     if (!window.confirm("¿Eliminar este cobro?")) return;
     await deleteDoc(doc(db, "cobros", id));
+    await registrarAuditoria("COBRO_ELIMINADO", `Cobro "${titulo}" eliminado`);
     toast.success("Cobro eliminado");
     loadData();
+  };
+
+  // Socios no asignados a un cobro
+  const sociosNoAsignados = (cobro) => {
+    const asignadosIds = cobro.asignados?.map(a => a.socioId) || [];
+    return socios.filter(s => s.activo && !asignadosIds.includes(s.uid || s.id));
   };
 
   return (
@@ -175,16 +215,11 @@ export default function CobrosExtraordinarios() {
                     </div>
                     {c.descripcion && <p style={{ color: "var(--gris-medio)", fontSize: "0.88rem", marginBottom: 6 }}>{c.descripcion}</p>}
                     {c.fechaLimite && <p style={{ color: "var(--amarillo)", fontSize: "0.82rem", marginBottom: 6 }}>⏰ Fecha límite: {c.fechaLimite}</p>}
-
-                    {/* Cuenta destino */}
                     {c.cuentaDestino && (
-                      <div style={{ background: "#1a2a1a", borderRadius: 6, padding: "8px 12px", marginBottom: 8, fontSize: "0.82rem" }}>
-                        <span style={{ color: "var(--verde-claro)" }}>🏦 Cuenta: </span>
-                        <span style={{ color: "var(--blanco)" }}>{c.cuentaDestino.nombre} · {c.cuentaDestino.banco} · {c.cuentaDestino.numero} ({c.cuentaDestino.tipo})</span>
+                      <div style={{ background: "#1a2a1a", borderRadius: 6, padding: "6px 10px", marginBottom: 8, fontSize: "0.8rem" }}>
+                        🏦 <span style={{ color: "var(--verde-claro)" }}>{c.cuentaDestino.nombre}</span> · {c.cuentaDestino.banco} · <strong style={{ color: "var(--dorado)" }}>{c.cuentaDestino.numero}</strong>
                       </div>
                     )}
-
-                    {/* Progress */}
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                         <span style={{ fontSize: "0.8rem", color: "var(--gris-medio)" }}>{aprobados} / {total} pagaron</span>
@@ -195,9 +230,10 @@ export default function CobrosExtraordinarios() {
                       </div>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button className="btn btn-secondary" style={{ padding: "7px 14px", fontSize: "0.8rem" }} onClick={() => setDetalle(c)}>Ver asignados</button>
-                    <button className="btn btn-danger" style={{ padding: "7px 14px", fontSize: "0.8rem" }} onClick={() => eliminarCobro(c.id)}>Eliminar</button>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button className="btn btn-secondary" style={{ padding: "7px 12px", fontSize: "0.78rem" }} onClick={() => setDetalle(c)}>Ver asignados</button>
+                    <button className="btn btn-gold" style={{ padding: "7px 12px", fontSize: "0.78rem" }} onClick={() => { setModalAgregar(c); setSociosAAgregar([]); setMontoExtra(c.montoBase || ""); }}>+ Jugadores</button>
+                    <button className="btn btn-danger" style={{ padding: "7px 12px", fontSize: "0.78rem" }} onClick={() => eliminarCobro(c.id, c.titulo)}>Eliminar</button>
                   </div>
                 </div>
               </div>
@@ -206,7 +242,7 @@ export default function CobrosExtraordinarios() {
         }
       </div>
 
-      {/* Modal detalle */}
+      {/* Modal detalle asignados */}
       {detalle && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
           <div className="card" style={{ width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto" }}>
@@ -217,13 +253,13 @@ export default function CobrosExtraordinarios() {
             {detalle.cuentaDestino && (
               <div style={{ background: "#1a2a1a", borderRadius: 8, padding: 12, marginBottom: 16 }}>
                 <div className="label" style={{ color: "var(--verde-claro)", marginBottom: 6 }}>🏦 CUENTA DE DESTINO</div>
-                <div style={{ fontSize: "0.88rem" }}>
+                <div style={{ fontSize: "0.88rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                   <div><strong>Titular:</strong> {detalle.cuentaDestino.nombre}</div>
-                  <div><strong>Cédula/RUC:</strong> {detalle.cuentaDestino.cedula}</div>
-                  <div><strong>Email:</strong> {detalle.cuentaDestino.email}</div>
+                  {detalle.cuentaDestino.cedula && <div><strong>CI/RUC:</strong> {detalle.cuentaDestino.cedula}</div>}
                   <div><strong>Banco:</strong> {detalle.cuentaDestino.banco}</div>
-                  <div><strong>Número:</strong> {detalle.cuentaDestino.numero}</div>
                   <div><strong>Tipo:</strong> {detalle.cuentaDestino.tipo}</div>
+                  <div style={{ gridColumn: "span 2" }}><strong>N°:</strong> <span style={{ color: "var(--dorado)" }}>{detalle.cuentaDestino.numero}</span></div>
+                  {detalle.cuentaDestino.email && <div style={{ gridColumn: "span 2" }}><strong>Email:</strong> {detalle.cuentaDestino.email}</div>}
                 </div>
               </div>
             )}
@@ -234,15 +270,63 @@ export default function CobrosExtraordinarios() {
                   <tr key={i}>
                     <td>{a.socioNombre}</td>
                     <td style={{ color: "var(--dorado)", fontFamily: "'Barlow Condensed'", fontWeight: 700 }}>${a.monto?.toFixed(2)}</td>
-                    <td>
-                      <span className={`badge badge-${a.estado === "aprobado" ? "aprobado" : "pendiente"}`}>
-                        {a.estado === "aprobado" ? "✅ Pagado" : "⏳ Pendiente"}
-                      </span>
-                    </td>
+                    <td><span className={`badge badge-${a.estado === "aprobado" ? "aprobado" : "pendiente"}`}>{a.estado === "aprobado" ? "✅ Pagado" : "⏳ Pendiente"}</span></td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal agregar jugadores a cobro existente */}
+      {modalAgregar && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
+          <div className="card" style={{ width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+              <h2 style={{ fontSize: "1.5rem" }}>➕ Agregar Jugadores</h2>
+              <button onClick={() => setModalAgregar(null)} style={{ background: "none", border: "none", color: "var(--gris-medio)", cursor: "pointer", fontSize: "1.5rem" }}>✕</button>
+            </div>
+            <div style={{ background: "#1a2a1a", borderRadius: 8, padding: 10, marginBottom: 16 }}>
+              <div style={{ fontWeight: 600 }}>✈️ {modalAgregar.titulo}</div>
+              <div style={{ color: "var(--gris-medio)", fontSize: "0.82rem" }}>Monto base: ${modalAgregar.montoBase}</div>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label className="label" style={{ display: "block", marginBottom: 5, color: "var(--gris-medio)" }}>Monto para estos jugadores ($)</label>
+              <input type="number" value={montoExtra} onChange={e => setMontoExtra(e.target.value)} placeholder={modalAgregar.montoBase} />
+            </div>
+
+            <div className="label" style={{ color: "var(--gris-medio)", marginBottom: 8 }}>Jugadores disponibles ({sociosNoAsignados(modalAgregar).length})</div>
+            <div style={{ maxHeight: 280, overflowY: "auto", border: "1px solid #2a2a2a", borderRadius: 8, marginBottom: 16 }}>
+              {sociosNoAsignados(modalAgregar).length === 0 ? (
+                <div style={{ padding: 20, textAlign: "center", color: "var(--gris-medio)", fontSize: "0.88rem" }}>Todos los socios activos ya están asignados</div>
+              ) : sociosNoAsignados(modalAgregar).map(s => (
+                <div key={s.id} style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "10px 14px",
+                  borderBottom: "1px solid #1e1e1e",
+                  background: sociosAAgregar.includes(s.uid || s.id) ? "#0f2a1f" : "transparent"
+                }}>
+                  <input type="checkbox" checked={sociosAAgregar.includes(s.uid || s.id)}
+                    onChange={() => {
+                      const id = s.uid || s.id;
+                      setSociosAAgregar(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+                    }}
+                    style={{ width: 16, height: 16, accentColor: "var(--verde)" }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "0.9rem", fontWeight: 600 }}>{s.nombre} {s.apellido}</div>
+                    <div style={{ color: "var(--gris-medio)", fontSize: "0.75rem" }}>{s.categoria}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn btn-secondary" style={{ flex: 1, justifyContent: "center" }} onClick={() => setModalAgregar(null)}>Cancelar</button>
+              <button className="btn btn-primary" style={{ flex: 1, justifyContent: "center" }} onClick={handleAgregarJugadores} disabled={agregando || sociosAAgregar.length === 0}>
+                {agregando ? "Agregando..." : `✅ Agregar ${sociosAAgregar.length > 0 ? sociosAAgregar.length : ""} Jugador${sociosAAgregar.length !== 1 ? "es" : ""}`}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -255,7 +339,6 @@ export default function CobrosExtraordinarios() {
               <h2 style={{ fontSize: "1.8rem" }}>NUEVO COBRO EXTRAORDINARIO</h2>
               <button onClick={() => setModal(false)} style={{ background: "none", border: "none", color: "var(--gris-medio)", cursor: "pointer", fontSize: "1.5rem" }}>✕</button>
             </div>
-
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
                 <label className="label" style={{ display: "block", marginBottom: 5, color: "var(--gris-medio)" }}>Título *</label>
@@ -276,7 +359,7 @@ export default function CobrosExtraordinarios() {
                 </div>
               </div>
 
-              {/* Cuenta de destino */}
+              {/* Cuenta destino */}
               <div style={{ background: "#1a2a1a", borderRadius: 8, padding: 14, border: "1px solid #2a4a2a" }}>
                 <div className="label" style={{ color: "var(--verde-claro)", marginBottom: 12 }}>🏦 CUENTA DE DESTINO (opcional)</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -328,7 +411,7 @@ export default function CobrosExtraordinarios() {
 
               {form.asignacion === "categoria" && (
                 <div>
-                  <label className="label" style={{ display: "block", marginBottom: 8, color: "var(--gris-medio)" }}>Seleccionar categorías</label>
+                  <label className="label" style={{ display: "block", marginBottom: 8, color: "var(--gris-medio)" }}>Categorías</label>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {CATEGORIAS.map(c => (
                       <button key={c} onClick={() => toggleCategoria(c)} className="btn"
@@ -337,30 +420,29 @@ export default function CobrosExtraordinarios() {
                       </button>
                     ))}
                   </div>
-                  <p style={{ color: "var(--gris-medio)", fontSize: "0.8rem", marginTop: 6 }}>{sociosFiltrados().length} socios seleccionados</p>
+                  <p style={{ color: "var(--gris-medio)", fontSize: "0.8rem", marginTop: 6 }}>{sociosFiltrados().length} socios</p>
                 </div>
               )}
 
               {form.asignacion === "individual" && (
                 <div>
-                  <label className="label" style={{ display: "block", marginBottom: 8, color: "var(--gris-medio)" }}>Seleccionar socios y montos</label>
+                  <label className="label" style={{ display: "block", marginBottom: 8, color: "var(--gris-medio)" }}>Seleccionar socios</label>
                   <div style={{ maxHeight: 250, overflowY: "auto", border: "1px solid #2a2a2a", borderRadius: 6 }}>
                     {socios.filter(s => s.activo).map(s => {
                       const sel = form.sociosSeleccionados.find(ss => ss.socioId === s.id);
                       return (
                         <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderBottom: "1px solid #1e1e1e", background: sel ? "#0f2a1f" : "transparent" }}>
                           <input type="checkbox" checked={!!sel} onChange={() => toggleSocioSel(s.id)} style={{ width: 16, height: 16, accentColor: "var(--verde)" }} />
-                          <div style={{ flex: 1, fontSize: "0.9rem" }}>{s.nombre} {s.apellido} <span style={{ color: "var(--gris-medio)", fontSize: "0.78rem" }}>{s.categoria}</span></div>
+                          <div style={{ flex: 1, fontSize: "0.9rem" }}>{s.nombre} {s.apellido} <span style={{ color: "var(--gris-medio)", fontSize: "0.75rem" }}>{s.categoria}</span></div>
                           {sel && <input type="number" value={sel.monto} onChange={e => setSocioMonto(s.id, e.target.value)} style={{ width: 80, padding: "4px 8px", fontSize: "0.85rem" }} placeholder="$" />}
                         </div>
                       );
                     })}
                   </div>
-                  <p style={{ color: "var(--gris-medio)", fontSize: "0.8rem", marginTop: 6 }}>{form.sociosSeleccionados.length} socios seleccionados</p>
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+              <div style={{ display: "flex", gap: 12 }}>
                 <button className="btn btn-secondary" onClick={() => setModal(false)} style={{ flex: 1, justifyContent: "center" }}>Cancelar</button>
                 <button className="btn btn-primary" onClick={handleCrear} disabled={saving} style={{ flex: 1, justifyContent: "center" }}>
                   {saving ? "Creando..." : "✈️ Crear Cobro"}

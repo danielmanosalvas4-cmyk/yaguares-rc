@@ -8,9 +8,9 @@ import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { format, isPast } from "date-fns";
+import { es } from "date-fns/locale";
 import FooterBrand from "../../components/shared/FooterBrand";
 import FichaJugador from "./FichaJugador";
-import { es } from "date-fns/locale";
 
 export default function PortalJugador() {
   const { user, socioData } = useAuth();
@@ -22,7 +22,7 @@ export default function PortalJugador() {
   const [archivo, setArchivo] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
   const [preview, setPreview] = useState(null);
-  const [vista, setVista] = useState("inicio"); // inicio | perfil | ficha
+  const [vista, setVista] = useState("inicio");
   const [nuevaPassword, setNuevaPassword] = useState("");
   const [cambioPass, setCambioPass] = useState(false);
 
@@ -37,15 +37,11 @@ export default function PortalJugador() {
         orderBy("creadoEn", "desc")
       ));
       const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // Marcar vencidos automáticamente
       const hoy = new Date();
       for (const p of lista) {
-        if (p.estado === "pendiente" && p.fechaVencimiento) {
-          const vence = new Date(p.fechaVencimiento);
-          if (isPast(vence) && p.estado === "pendiente") {
-            await updateDoc(doc(db, "pagos", p.id), { estado: "vencido" });
-            p.estado = "vencido";
-          }
+        if (p.estado === "pendiente" && p.fechaVencimiento && isPast(new Date(p.fechaVencimiento))) {
+          await updateDoc(doc(db, "pagos", p.id), { estado: "vencido" });
+          p.estado = "vencido";
         }
       }
       setPagos(lista);
@@ -65,7 +61,7 @@ export default function PortalJugador() {
   };
 
   const handleEnviarComprobante = async () => {
-    if (!archivo) { toast.error("Seleccioná una imagen del comprobante"); return; }
+    if (!archivo) { toast.error("Selecciona una imagen del comprobante"); return; }
     setSubiendo(true);
     try {
       const storageRef = ref(storage, `comprobantes/${user.uid}/${modalPago.id}_${Date.now()}`);
@@ -90,17 +86,14 @@ export default function PortalJugador() {
       toast.success("✅ Contraseña actualizada");
       setNuevaPassword("");
     } catch (err) {
-      if (err.code === "auth/requires-recent-login") {
-        toast.error("Por seguridad, cerrá sesión y volvé a ingresar para cambiar la contraseña");
-      } else { toast.error(err.message); }
+      if (err.code === "auth/requires-recent-login") toast.error("Cierra sesión y vuelve a ingresar para cambiar la contraseña");
+      else toast.error(err.message);
     } finally { setCambioPass(false); }
   };
 
   const isVencido = (p) => {
     if (p.estado === "vencido") return true;
-    if (p.fechaVencimiento && p.estado === "pendiente") {
-      return isPast(new Date(p.fechaVencimiento));
-    }
+    if (p.fechaVencimiento && p.estado === "pendiente") return isPast(new Date(p.fechaVencimiento));
     return false;
   };
 
@@ -120,42 +113,43 @@ export default function PortalJugador() {
   };
 
   const formatFecha = (iso) => {
-    if (!iso) return "-";
+    if (!iso) return "—";
     try { return format(new Date(iso), "d MMM yyyy", { locale: es }); } catch { return iso; }
   };
 
-  const CATEGORIAS = { juvenil: "Juvenil", adulto_mayor: "Adulto Mayor", femenino_juvenil: "Femenino Juvenil", femenino_adulto: "Femenino Adulto Mayor" };
+  const CATEGORIAS = { juvenil: "Juvenil", adulto: "Adulto", femenino_juvenil: "Femenino Juvenil", femenino_adulto: "Femenino Adulto" };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--negro)" }}>
       {/* Header */}
       <header style={{ background: "var(--gris-oscuro)", borderBottom: "1px solid #222", padding: "0 16px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 34, height: 34, background: "var(--verde)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>🐆</div>
+          <img src="/escudo-yaguares.png" alt="Yaguares" style={{ width: 32, height: 32, objectFit: "contain" }} />
           <div>
             <div style={{ fontFamily: "'Bebas Neue'", fontSize: "1rem", lineHeight: 1 }}>YAGUARES RC</div>
             <div style={{ fontFamily: "'Barlow Condensed'", fontSize: "0.6rem", color: "var(--verde-claro)", letterSpacing: "0.1em", textTransform: "uppercase" }}>Portal Jugador</div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span style={{ fontSize: "0.82rem", color: "var(--gris-medio)", display: "none" }} className="hide-mobile">{socioData?.nombre}</span>
-          <button className="btn btn-secondary" style={{ padding: "6px 12px", fontSize: "0.75rem" }} onClick={() => setVista(vista === "ficha" ? "inicio" : "ficha")}>🏉 Mi Ficha</button>
-          <button className="btn btn-secondary" style={{ padding: "6px 12px", fontSize: "0.75rem" }} onClick={() => setVista(vista === "perfil" ? "inicio" : "perfil")}>{vista !== "inicio" ? "🏠 Inicio" : "👤 Perfil"}</button>
-          <button className="btn" style={{ padding: "6px 12px", fontSize: "0.75rem", background: "var(--gris)", color: "var(--gris-medio)" }} onClick={handleLogout}>Salir</button>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <button className="btn btn-secondary" style={{ padding: "5px 10px", fontSize: "0.72rem" }} onClick={() => setVista(vista === "ficha" ? "inicio" : "ficha")}>
+            {vista === "ficha" ? "🏠" : "🏉"}
+          </button>
+          <button className="btn btn-secondary" style={{ padding: "5px 10px", fontSize: "0.72rem" }} onClick={() => setVista(vista === "perfil" ? "inicio" : "perfil")}>
+            {vista === "perfil" ? "🏠" : "👤"}
+          </button>
+          <button className="btn" style={{ padding: "5px 10px", fontSize: "0.72rem", background: "var(--gris)", color: "var(--gris-medio)" }} onClick={handleLogout}>Salir</button>
         </div>
       </header>
 
       <div style={{ padding: "20px 16px", maxWidth: 860, margin: "0 auto" }}>
-        {/* ── VISTA FICHA ── */}
+
+        {/* VISTA FICHA */}
         {vista === "ficha" && <FichaJugador onVolver={() => setVista("inicio")} />}
 
-
-        {/* ── VISTA PERFIL ── */}
+        {/* VISTA PERFIL */}
         {vista === "perfil" && (
           <div className="fade-in">
             <h2 style={{ fontSize: "2rem", marginBottom: 20 }}>MI PERFIL</h2>
-
-            {/* Info del socio */}
             <div className="card" style={{ marginBottom: 16, borderLeft: "3px solid var(--verde)" }}>
               <h3 style={{ fontSize: "1.1rem", marginBottom: 16 }}>📋 Datos del Socio</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
@@ -173,24 +167,16 @@ export default function PortalJugador() {
                   </div>
                 ))}
               </div>
-              <div style={{ marginTop: 12, padding: "8px 12px", background: socioData?.activo ? "#0f2a1a" : "#2a0f0f", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <div style={{ marginTop: 12 }}>
                 <span style={{ color: socioData?.activo ? "var(--verde-claro)" : "var(--rojo-claro)", fontWeight: 700, fontSize: "0.85rem" }}>
                   {socioData?.activo ? "✅ Socio Activo" : "❌ Socio Inactivo"}
                 </span>
               </div>
             </div>
-
-            {/* Cambiar contraseña */}
             <div className="card" style={{ borderLeft: "3px solid var(--dorado)" }}>
               <h3 style={{ fontSize: "1.1rem", marginBottom: 16 }}>🔒 Cambiar Contraseña</h3>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <input
-                  type="password"
-                  value={nuevaPassword}
-                  onChange={e => setNuevaPassword(e.target.value)}
-                  placeholder="Nueva contraseña (mín. 6 caracteres)"
-                  style={{ flex: 1, minWidth: 200 }}
-                />
+                <input type="password" value={nuevaPassword} onChange={e => setNuevaPassword(e.target.value)} placeholder="Nueva contraseña (mín. 6 caracteres)" style={{ flex: 1, minWidth: 200 }} />
                 <button className="btn btn-gold" onClick={handleCambiarPassword} disabled={cambioPass || !nuevaPassword}>
                   {cambioPass ? "Guardando..." : "Actualizar"}
                 </button>
@@ -199,10 +185,9 @@ export default function PortalJugador() {
           </div>
         )}
 
-        {/* ── VISTA INICIO ── */}
+        {/* VISTA INICIO */}
         {vista === "inicio" && (
           <div className="fade-in">
-            {/* Saludo */}
             <div style={{ marginBottom: 20 }}>
               <h2 style={{ fontSize: "1.8rem" }}>¡Hola, {socioData?.nombre}! 🐆</h2>
               <p style={{ color: "var(--gris-medio)", fontSize: "0.88rem" }}>{format(new Date(), "EEEE d 'de' MMMM", { locale: es })}</p>
@@ -251,6 +236,38 @@ export default function PortalJugador() {
                           {p.estado === "revision" && (
                             <div style={{ color: "#5dade2", fontSize: "0.78rem", marginTop: 4 }}>🔍 En revisión por el administrador</div>
                           )}
+
+                          {/* CUENTA DE DESTINO — visible para cobros extraordinarios */}
+                          {p.cuentaDestino && p.cuentaDestino.nombre && (
+                            <div style={{ background: "#0f2a1f", border: "1px solid #1a4a2a", borderRadius: 8, padding: "10px 12px", marginTop: 10 }}>
+                              <div style={{ color: "var(--verde-claro)", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: "0.78rem", letterSpacing: "0.08em", marginBottom: 6 }}>
+                                🏦 DEPOSITAR A ESTA CUENTA:
+                              </div>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                                {[
+                                  { label: "Titular", value: p.cuentaDestino.nombre },
+                                  { label: "Cédula/RUC", value: p.cuentaDestino.cedula },
+                                  { label: "Banco", value: p.cuentaDestino.banco },
+                                  { label: "Tipo", value: p.cuentaDestino.tipo },
+                                ].filter(f => f.value).map((f, i) => (
+                                  <div key={i}>
+                                    <div style={{ color: "var(--gris-medio)", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>{f.label}</div>
+                                    <div style={{ color: "var(--blanco)", fontSize: "0.85rem", fontWeight: 500 }}>{f.value}</div>
+                                  </div>
+                                ))}
+                                <div style={{ gridColumn: "span 2" }}>
+                                  <div style={{ color: "var(--gris-medio)", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>N° de Cuenta</div>
+                                  <div style={{ color: "var(--dorado)", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: "1rem" }}>{p.cuentaDestino.numero}</div>
+                                </div>
+                                {p.cuentaDestino.email && (
+                                  <div style={{ gridColumn: "span 2" }}>
+                                    <div style={{ color: "var(--gris-medio)", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Email</div>
+                                    <div style={{ color: "var(--blanco)", fontSize: "0.85rem" }}>{p.cuentaDestino.email}</div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div style={{ textAlign: "right" }}>
@@ -285,7 +302,9 @@ export default function PortalJugador() {
                       <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderBottom: i < historial.length - 1 ? "1px solid #1e1e1e" : "none", flexWrap: "wrap", gap: 8 }}>
                         <div>
                           <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{p.concepto}</div>
-                          <div style={{ color: "var(--gris-medio)", fontSize: "0.78rem" }}>{formatFecha(p.fechaPago)} · {p.metodoPago === "comprobante" ? "📎 Comprobante" : "💳 Tarjeta"}</div>
+                          <div style={{ color: "var(--gris-medio)", fontSize: "0.78rem" }}>
+                            {formatFecha(p.fechaPago)} · {p.metodoPago === "comprobante" ? "📎 Comprobante" : p.metodoPago === "tarjeta" ? "💳 Tarjeta" : p.metodoPago || "—"}
+                          </div>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <span style={{ color: "var(--dorado)", fontFamily: "'Barlow Condensed'", fontWeight: 700 }}>${p.monto?.toFixed(2)}</span>
@@ -301,6 +320,8 @@ export default function PortalJugador() {
         )}
       </div>
 
+      <FooterBrand />
+
       {/* Modal de pago */}
       {modalPago && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1000 }}>
@@ -314,13 +335,27 @@ export default function PortalJugador() {
             <div style={{ background: "#1a2a1a", borderRadius: 8, padding: 14, marginBottom: 16 }}>
               <div className="label" style={{ color: "var(--gris-medio)", marginBottom: 4 }}>Concepto</div>
               <div style={{ fontWeight: 600 }}>{modalPago.concepto}</div>
-              {modalPago.fechaVencimiento && (
-                <div style={{ color: isVencido(modalPago) ? "var(--rojo-claro)" : "var(--amarillo)", fontSize: "0.8rem", marginTop: 4 }}>
-                  {isVencido(modalPago) ? "🔴 Venció el" : "⏰ Vence el"} {formatFecha(modalPago.fechaVencimiento)}
-                </div>
-              )}
               <div style={{ fontFamily: "'Bebas Neue'", fontSize: "2rem", color: "var(--dorado)", marginTop: 4 }}>${modalPago.monto?.toFixed(2)}</div>
             </div>
+
+            {/* Cuenta destino en modal */}
+            {modalPago.cuentaDestino && modalPago.cuentaDestino.nombre && (
+              <div style={{ background: "#0f2a1f", border: "1px solid #1a4a2a", borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                <div style={{ color: "var(--verde-claro)", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: "0.78rem", letterSpacing: "0.08em", marginBottom: 8 }}>
+                  🏦 DEPOSITAR A:
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: "0.85rem" }}>
+                  <div><span style={{ color: "var(--gris-medio)" }}>Titular: </span>{modalPago.cuentaDestino.nombre}</div>
+                  {modalPago.cuentaDestino.cedula && <div><span style={{ color: "var(--gris-medio)" }}>CI/RUC: </span>{modalPago.cuentaDestino.cedula}</div>}
+                  <div><span style={{ color: "var(--gris-medio)" }}>Banco: </span>{modalPago.cuentaDestino.banco}</div>
+                  <div><span style={{ color: "var(--gris-medio)" }}>Tipo: </span>{modalPago.cuentaDestino.tipo}</div>
+                  <div style={{ gridColumn: "span 2" }}>
+                    <span style={{ color: "var(--gris-medio)" }}>N° Cuenta: </span>
+                    <strong style={{ color: "var(--dorado)", fontFamily: "'Barlow Condensed'", fontSize: "1rem" }}>{modalPago.cuentaDestino.numero}</strong>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Selector método */}
             <div style={{ marginBottom: 16 }}>
@@ -328,7 +363,7 @@ export default function PortalJugador() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[
                   { id: "comprobante", icon: "📎", title: "Comprobante", sub: "Depósito / Transferencia" },
-                  { id: "tarjeta", icon: "💳", title: "Tarjeta de Débito", sub: "Pago inmediato - DeUna" },
+                  { id: "tarjeta", icon: "💳", title: "Tarjeta", sub: "Próximamente DeUna" },
                 ].map(m => (
                   <button key={m.id} onClick={() => setMetodoPago(m.id)} style={{
                     padding: "14px 10px", borderRadius: 8, cursor: "pointer",
@@ -354,34 +389,33 @@ export default function PortalJugador() {
                   ) : (
                     <div>
                       <div style={{ fontSize: "2rem", marginBottom: 6 }}>📷</div>
-                      <div style={{ color: "var(--gris-medio)", fontSize: "0.88rem" }}>Tocá para adjuntar comprobante</div>
+                      <div style={{ color: "var(--gris-medio)", fontSize: "0.88rem" }}>Toca para adjuntar comprobante</div>
                     </div>
                   )}
                 </label>
                 {archivo && <p style={{ color: "var(--verde-claro)", fontSize: "0.8rem", marginTop: 6 }}>✓ {archivo.name}</p>}
-                <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 14, padding: "13px" }} onClick={handleEnviarComprobante} disabled={subiendo || !archivo}>
+                <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 14, padding: "13px" }}
+                  onClick={handleEnviarComprobante} disabled={subiendo || !archivo}>
                   {subiendo ? "Subiendo..." : "📤 Enviar Comprobante"}
                 </button>
               </div>
             )}
 
-            {/* Tarjeta / DeUna */}
             {metodoPago === "tarjeta" && (
               <div>
                 <div style={{ background: "#1a1a2a", borderRadius: 8, padding: 14, marginBottom: 14 }}>
                   <p style={{ color: "#aaa", fontSize: "0.86rem", lineHeight: 1.6 }}>
-                    Próximamente podrás pagar con <strong style={{ color: "var(--dorado)" }}>DeUna</strong> directamente desde acá. Por ahora usá el comprobante.
+                    Próximamente podrás pagar con <strong style={{ color: "var(--dorado)" }}>DeUna</strong>. Por ahora usa el comprobante.
                   </p>
                 </div>
                 <button className="btn btn-secondary" style={{ width: "100%", justifyContent: "center" }} onClick={() => setMetodoPago("comprobante")}>
-                  Usar comprobante en su lugar
+                  Usar comprobante
                 </button>
               </div>
             )}
           </div>
         </div>
       )}
-      <FooterBrand />
     </div>
   );
 }

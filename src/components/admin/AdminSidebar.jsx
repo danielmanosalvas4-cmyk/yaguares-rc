@@ -10,11 +10,12 @@ const links = [
   { to: "/admin/socios", label: "Socios", icon: "👥" },
   { to: "/admin/pagos", label: "Validar Pagos", icon: "✅" },
   { to: "/admin/historial", label: "Historial", icon: "📋" },
-  { to: "/admin/historicos", label: "Pagos Históricos", icon: "🕐" },
+  { to: "/admin/historicos", label: "Históricos", icon: "🕐" },
   { to: "/admin/anual", label: "Pago Anual", icon: "💰" },
   { to: "/admin/fichas", label: "Fichas", icon: "🏉" },
   { to: "/admin/cobros", label: "Extraordinarios", icon: "✈️" },
   { to: "/admin/reportes", label: "Reportes", icon: "📈" },
+  { to: "/admin/auditoria", label: "Auditoría", icon: "🔎" },
   { to: "/admin/admins", label: "Admins", icon: "🛡️" },
 ];
 
@@ -28,29 +29,16 @@ export default function AdminSidebar() {
 
   return (
     <aside className="sidebar">
-      {/* Logo con escudo */}
-      <div style={{
-        padding: "16px", borderBottom: "1px solid #222",
-        background: "var(--verde-oscuro)", flexShrink: 0,
-        position: "relative", overflow: "hidden"
-      }}>
-        <div style={{
-          position: "absolute", right: -20, top: -20,
-          width: 80, height: 80,
-          backgroundImage: "url('/escudo-yaguares.png')",
-          backgroundSize: "contain", backgroundRepeat: "no-repeat",
-          opacity: 0.1
-        }} />
+      <div style={{ padding: "16px", borderBottom: "1px solid #222", background: "var(--verde-oscuro)", flexShrink: 0, position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", right: -20, top: -20, width: 80, height: 80, backgroundImage: "url('/escudo-yaguares.png')", backgroundSize: "contain", backgroundRepeat: "no-repeat", opacity: 0.1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative" }}>
           <img src="/escudo-yaguares.png" alt="Yaguares" style={{ width: 32, height: 32, objectFit: "contain" }} />
           <div>
-            <div style={{ fontFamily: "'Bebas Neue'", fontSize: "1rem", letterSpacing: "0.05em" }}>YAGUARES RC</div>
+            <div style={{ fontFamily: "'Bebas Neue'", fontSize: "1rem" }}>YAGUARES RC</div>
             <div style={{ fontFamily: "'Barlow Condensed'", fontSize: "0.6rem", color: "var(--verde-claro)", letterSpacing: "0.12em", textTransform: "uppercase" }}>Panel Admin</div>
           </div>
         </div>
       </div>
-
-      {/* Nav */}
       <nav style={{ flex: 1, padding: "8px 0", overflowY: "auto" }}>
         {links.map(link => (
           <NavLink key={link.to} to={link.to} end={link.end}
@@ -63,15 +51,11 @@ export default function AdminSidebar() {
               background: isActive ? "var(--verde-oscuro)" : "transparent",
               borderLeft: isActive ? "3px solid var(--verde-claro)" : "3px solid transparent",
               transition: "all 0.15s"
-            })}
-          >
-            <span style={{ fontSize: "0.9rem" }}>{link.icon}</span>
-            {link.label}
+            })}>
+            <span style={{ fontSize: "0.9rem" }}>{link.icon}</span>{link.label}
           </NavLink>
         ))}
       </nav>
-
-      {/* Logout */}
       <div style={{ padding: "12px 16px", borderTop: "1px solid #222", flexShrink: 0 }}>
         <button onClick={handleLogout} className="btn btn-secondary" style={{ width: "100%", justifyContent: "center", fontSize: "0.78rem" }}>
           🚪 Cerrar Sesión
