@@ -190,9 +190,11 @@ export default function CobrosAbonos() {
   const abonosDelParticipante = (cobroId, socioId) =>
     abonos.filter(a => a.cobroId === cobroId && a.socioId === socioId).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
+  const sociosDisponibles = socios.filter(s => s.activo !== false);
+
   const sociosNoAsignados = (cobro) => {
     const ids = cobro.participantes?.map(p => p.socioId) || [];
-    return socios.filter(s => s.activo && !ids.includes(s.uid || s.id));
+    return socios.filter(s => s.activo !== false && !ids.includes(s.uid || s.id));
   };
 
   const formatFecha = (iso) => {
@@ -534,22 +536,38 @@ export default function CobrosAbonos() {
                   <label className="label" style={{ color: "var(--gris-medio)" }}>Seleccionar jugadores *</label>
                   <span style={{ color: "var(--verde-claro)", fontSize: "0.82rem", fontWeight: 700 }}>{form.sociosSeleccionados.length} seleccionados</span>
                 </div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                  <button type="button" className="btn btn-secondary" style={{ padding: "5px 12px", fontSize: "0.75rem" }}
+                    onClick={() => setForm(f => ({ ...f, sociosSeleccionados: sociosDisponibles.map(s => s.uid || s.id) }))}>
+                    Seleccionar todos
+                  </button>
+                  <button type="button" className="btn btn-secondary" style={{ padding: "5px 12px", fontSize: "0.75rem" }}
+                    onClick={() => setForm(f => ({ ...f, sociosSeleccionados: [] }))}>
+                    Limpiar
+                  </button>
+                </div>
                 <div style={{ maxHeight: 240, overflowY: "auto", border: "1px solid #2a2a2a", borderRadius: 8 }}>
-                  {socios.filter(s => s.activo).map(s => {
+                  {sociosDisponibles.length === 0 ? (
+                    <div style={{ padding: 20, textAlign: "center", color: "var(--gris-medio)", fontSize: "0.85rem" }}>
+                      No hay socios cargados. Crea socios primero en la sección Socios.
+                    </div>
+                  ) : sociosDisponibles.map(s => {
                     const sid = s.uid || s.id;
                     const sel = form.sociosSeleccionados.includes(sid);
                     return (
-                      <div key={s.id} onClick={() => toggleSocio(sid)} style={{
-                        display: "flex", alignItems: "center", gap: 12, padding: "9px 14px",
+                      <label key={s.id} style={{
+                        display: "flex", alignItems: "center", gap: 12, padding: "10px 14px",
                         borderBottom: "1px solid #1e1e1e", cursor: "pointer",
                         background: sel ? "#0f2a1f" : "transparent"
                       }}>
-                        <input type="checkbox" checked={sel} onChange={() => {}} style={{ width: 16, height: 16, accentColor: "var(--verde)" }} />
+                        <input type="checkbox" checked={sel} onChange={() => toggleSocio(sid)}
+                          style={{ width: 18, height: 18, accentColor: "var(--verde)", cursor: "pointer", flexShrink: 0 }} />
                         <div style={{ flex: 1, fontSize: "0.9rem" }}>
                           {s.nombre} {s.apellido}
                           <span style={{ color: "var(--gris-medio)", fontSize: "0.75rem", marginLeft: 8 }}>{s.categoria}</span>
+                          {s.activo === false && <span style={{ color: "var(--rojo-claro)", fontSize: "0.7rem", marginLeft: 6 }}>(inactivo)</span>}
                         </div>
-                      </div>
+                      </label>
                     );
                   })}
                 </div>
