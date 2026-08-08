@@ -37,14 +37,34 @@ export default function CobrosAbonos() {
 
   const loadData = async () => {
     setLoading(true);
-    const [cobrosSnap, sociosSnap, abonosSnap] = await Promise.all([
-      getDocs(collection(db, "cobrosAbonos")),
-      getDocs(collection(db, "socios")),
-      getDocs(collection(db, "abonos"))
-    ]);
-    setCobros(cobrosSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.creadoEn?.seconds || 0) - (a.creadoEn?.seconds || 0)));
-    setSocios(sociosSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-    setAbonos(abonosSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+    // Cada coleccion se carga por separado para que si una falla
+    // (por ejemplo por reglas de Firestore) no tumbe a las demas
+    try {
+      const snap = await getDocs(collection(db, "socios"));
+      setSocios(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.error("Error cargando socios:", err);
+      toast.error("No se pudieron cargar los socios: " + err.message);
+    }
+
+    try {
+      const snap = await getDocs(collection(db, "cobrosAbonos"));
+      setCobros(snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.creadoEn?.seconds || 0) - (a.creadoEn?.seconds || 0)));
+    } catch (err) {
+      console.error("Error cargando cobros:", err);
+      setCobros([]);
+    }
+
+    try {
+      const snap = await getDocs(collection(db, "abonos"));
+      setAbonos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.error("Error cargando abonos:", err);
+      setAbonos([]);
+    }
+
     setLoading(false);
   };
 
@@ -549,7 +569,7 @@ export default function CobrosAbonos() {
                 <div style={{ maxHeight: 240, overflowY: "auto", border: "1px solid #2a2a2a", borderRadius: 8 }}>
                   {sociosDisponibles.length === 0 ? (
                     <div style={{ padding: 20, textAlign: "center", color: "var(--gris-medio)", fontSize: "0.85rem" }}>
-                      No hay socios cargados. Crea socios primero en la sección Socios.
+                      No se cargaron socios. Revisa las reglas de Firestore o crea socios en la sección Socios.
                     </div>
                   ) : sociosDisponibles.map(s => {
                     const sid = s.uid || s.id;
