@@ -11,6 +11,7 @@ import { format, isPast } from "date-fns";
 import { es } from "date-fns/locale";
 import FooterBrand from "../../components/shared/FooterBrand";
 import FichaJugador from "./FichaJugador";
+import MisAbonos from "./MisAbonos";
 
 export default function PortalJugador() {
   const { user, socioData } = useAuth();
@@ -210,6 +211,9 @@ export default function PortalJugador() {
                 <div style={{ fontFamily: "'Bebas Neue'", fontSize: "1.3rem", color: "var(--verde-claro)" }}>¡ESTÁS AL DÍA! — Gracias por tu compromiso</div>
               </div>
             )}
+
+            {/* Viajes y eventos con abonos */}
+            <MisAbonos />
 
             {/* Pagos pendientes */}
             {pendientes.length > 0 && (

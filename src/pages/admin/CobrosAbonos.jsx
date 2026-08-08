@@ -160,12 +160,7 @@ export default function CobrosAbonos() {
       });
 
       // Actualizar el participante en el cobro
-      const nuevoAbonado = (participante.abonado || 0) + Number(formAbono.monto);
-      const nuevoEstado = nuevoAbonado >= participante.montoTotal ? "completo" : "parcial";
-      const nuevosParticipantes = cobro.participantes.map(p =>
-        p.socioId === participante.socioId ? { ...p, abonado: nuevoAbonado, estado: nuevoEstado } : p
-      );
-      await updateDoc(doc(db, "cobrosAbonos", cobro.id), { participantes: nuevosParticipantes });
+      await recalcularParticipante(cobro, participante.socioId, Number(formAbono.monto));
 
       await registrarAuditoria("ABONO_REGISTRADO", `Abono de $${formAbono.monto} de ${participante.socioNombre} para "${cobro.titulo}"`);
       toast.success(`✅ Abono de $${formAbono.monto} registrado`);
@@ -176,6 +171,51 @@ export default function CobrosAbonos() {
     } catch (err) { toast.error("Error: " + err.message); }
     finally { setSubiendoAbono(false); }
   };
+
+  // Recalcula el saldo del participante sumando un delta aprobado
+  const recalcularParticipante = async (cobro, socioId, delta) => {
+    const nuevosParticipantes = (cobro.participantes || []).map(p => {
+      if (p.socioId !== socioId) return p;
+      const nuevoAbonado = Math.max(0, (p.abonado || 0) + delta);
+      const nuevoEstado = nuevoAbonado >= p.montoTotal ? "completo" : nuevoAbonado > 0 ? "parcial" : "pendiente";
+      return { ...p, abonado: nuevoAbonado, estado: nuevoEstado };
+    });
+    await updateDoc(doc(db, "cobrosAbonos", cobro.id), { participantes: nuevosParticipantes });
+  };
+
+  const aprobarAbono = async (abono) => {
+    try {
+      const cobro = cobros.find(c => c.id === abono.cobroId);
+      if (!cobro) { toast.error("No se encontró el cobro"); return; }
+      await updateDoc(doc(db, "abonos", abono.id), {
+        estado: "aprobado",
+        aprobadoPor: user?.email || "admin",
+        fechaAprobacion: new Date().toISOString()
+      });
+      await recalcularParticipante(cobro, abono.socioId, Number(abono.monto));
+      await registrarAuditoria("ABONO_APROBADO", `Abono de $${abono.monto} de ${abono.socioNombre} aprobado — "${abono.cobroTitulo}"`);
+      toast.success(`✅ Abono de $${abono.monto} aprobado`);
+      loadData();
+    } catch (err) { toast.error("Error: " + err.message); }
+  };
+
+  const rechazarAbono = async (abono) => {
+    const nota = window.prompt("Motivo del rechazo:");
+    if (!nota) return;
+    try {
+      await updateDoc(doc(db, "abonos", abono.id), {
+        estado: "rechazado",
+        notaAdmin: nota,
+        rechazadoPor: user?.email || "admin",
+        fechaRechazo: new Date().toISOString()
+      });
+      await registrarAuditoria("ABONO_RECHAZADO", `Abono de $${abono.monto} de ${abono.socioNombre} rechazado — ${nota}`);
+      toast.success("Abono rechazado");
+      loadData();
+    } catch (err) { toast.error("Error: " + err.message); }
+  };
+
+  const abonosPendientes = abonos.filter(a => a.estado === "revision");
 
   const handleAgregarJugadores = async () => {
     if (sociosAAgregar.length === 0) { toast.error("Selecciona jugadores"); return; }
@@ -208,7 +248,8 @@ export default function CobrosAbonos() {
   };
 
   const abonosDelParticipante = (cobroId, socioId) =>
-    abonos.filter(a => a.cobroId === cobroId && a.socioId === socioId).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    abonos.filter(a => a.cobroId === cobroId && a.socioId === socioId && a.estado !== "rechazado")
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
   const sociosDisponibles = socios.filter(s => s.activo !== false);
 
@@ -237,6 +278,46 @@ export default function CobrosAbonos() {
         </div>
         <button className="btn btn-primary" onClick={() => setModal(true)}>+ Nuevo Cobro</button>
       </div>
+
+      {/* Abonos enviados por jugadores esperando aprobacion */}
+      {abonosPendientes.length > 0 && (
+        <div className="card" style={{ marginBottom: 20, borderLeft: "3px solid #5dade2" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            <h3 style={{ fontSize: "1.2rem" }}>🔍 ABONOS POR VALIDAR</h3>
+            <span style={{ background: "var(--amarillo)", color: "var(--negro)", borderRadius: 20, padding: "2px 10px", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: "0.85rem" }}>
+              {abonosPendientes.length}
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {abonosPendientes.map(a => (
+              <div key={a.id} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                flexWrap: "wrap", gap: 10, padding: 12, borderRadius: 8, background: "#161b22"
+              }}>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <div style={{ fontWeight: 600, fontSize: "0.92rem" }}>{a.socioNombre}</div>
+                  <div style={{ color: "var(--gris-medio)", fontSize: "0.8rem" }}>
+                    {a.cobroTitulo} · {a.metodoPago} · {formatFecha(a.fecha)}
+                  </div>
+                  {a.nota && <div style={{ color: "var(--gris-medio)", fontSize: "0.78rem", fontStyle: "italic" }}>"{a.nota}"</div>}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{ color: "var(--dorado)", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: "1.2rem" }}>
+                    ${a.monto?.toFixed(2)}
+                  </span>
+                  {a.comprobanteUrl && (
+                    <a href={a.comprobanteUrl} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ padding: "5px 10px", fontSize: "0.75rem" }}>
+                      📎 Ver
+                    </a>
+                  )}
+                  <button className="btn btn-primary" style={{ padding: "5px 12px", fontSize: "0.75rem" }} onClick={() => aprobarAbono(a)}>✅ Aprobar</button>
+                  <button className="btn btn-danger" style={{ padding: "5px 12px", fontSize: "0.75rem" }} onClick={() => rechazarAbono(a)}>❌</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Lista */}
       <div style={{ display: "grid", gap: 16 }}>
@@ -366,9 +447,14 @@ export default function CobrosAbonos() {
                       <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #222" }}>
                         {misAbonos.map(a => (
                           <div key={a.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", padding: "3px 0", color: "var(--gris-medio)" }}>
-                            <span>{formatFecha(a.fecha)} · {a.metodoPago}</span>
+                            <span>
+                              {formatFecha(a.fecha)} · {a.metodoPago}
+                              {a.origen === "jugador" && <span style={{ color: "#5dade2", marginLeft: 5 }}>(jugador)</span>}
+                            </span>
                             <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                              <span style={{ color: "var(--verde-claro)" }}>${a.monto.toFixed(2)}</span>
+                              <span style={{ color: a.estado === "revision" ? "#5dade2" : "var(--verde-claro)" }}>
+                                ${a.monto.toFixed(2)}{a.estado === "revision" ? " 🔍" : ""}
+                              </span>
                               {a.comprobanteUrl && <a href={a.comprobanteUrl} target="_blank" rel="noreferrer" style={{ color: "#5dade2" }}>📎</a>}
                             </span>
                           </div>
