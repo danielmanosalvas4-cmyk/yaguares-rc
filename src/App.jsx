@@ -9,6 +9,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import Socios from "./pages/admin/Socios";
 import ValidarPagos from "./pages/admin/ValidarPagos";
 import CobrosExtraordinarios from "./pages/admin/CobrosExtraordinarios";
+import CobrosAbonos from "./pages/admin/CobrosAbonos";
 import Reportes from "./pages/admin/Reportes";
 import Admins from "./pages/admin/Admins";
 import HistorialSocio from "./pages/admin/HistorialSocio";
@@ -39,8 +40,9 @@ export default function App() {
             <Route path="historial" element={<HistorialSocio />} />
             <Route path="historicos" element={<PagosHistoricos />} />
             <Route path="anual" element={<PagoAnual />} />
-            <Route path="fichas" element={<FichasAdmin />} />
+            <Route path="abonos" element={<CobrosAbonos />} />
             <Route path="cobros" element={<CobrosExtraordinarios />} />
+            <Route path="fichas" element={<FichasAdmin />} />
             <Route path="reportes" element={<Reportes />} />
             <Route path="auditoria" element={<Auditoria />} />
             <Route path="admins" element={<Admins />} />

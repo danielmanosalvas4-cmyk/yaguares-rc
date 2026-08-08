@@ -4,6 +4,7 @@ import { db } from "../../config/firebase";
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
 import toast from "react-hot-toast";
 import DetalleSocio from "./DetalleSocio";
+import SociosMasivo from "./SociosMasivo";
 
 const CATEGORIAS = [
   { id: "juvenil", label: "Juvenil" },
@@ -23,6 +24,7 @@ export default function Socios() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [socioDetalle, setSocioDetalle] = useState(null);
+  const [vistaMasiva, setVistaMasiva] = useState(false);
 
   useEffect(() => { loadSocios(); }, []);
 
@@ -96,6 +98,11 @@ export default function Socios() {
     return <DetalleSocio socio={socioDetalle} onVolver={() => { setSocioDetalle(null); loadSocios(); }} />;
   }
 
+  // Vista de carga masiva
+  if (vistaMasiva) {
+    return <SociosMasivo onVolver={() => { setVistaMasiva(false); loadSocios(); }} />;
+  }
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
@@ -103,7 +110,10 @@ export default function Socios() {
           <h1 style={{ fontSize: "2.5rem" }}>SOCIOS</h1>
           <p style={{ color: "var(--gris-medio)", marginTop: 4 }}>{socios.length} socios · Click en un socio para ver su detalle</p>
         </div>
-        <button className="btn btn-primary" onClick={openNew}>+ Nuevo Socio</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-secondary" onClick={() => setVistaMasiva(true)}>📋 Carga Masiva</button>
+          <button className="btn btn-primary" onClick={openNew}>+ Nuevo Socio</button>
+        </div>
       </div>
 
       <div style={{ marginBottom: 16 }}>

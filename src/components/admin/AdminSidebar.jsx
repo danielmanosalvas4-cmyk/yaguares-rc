@@ -12,8 +12,9 @@ const links = [
   { to: "/admin/historial", label: "Historial", icon: "📋" },
   { to: "/admin/historicos", label: "Históricos", icon: "🕐" },
   { to: "/admin/anual", label: "Pago Anual", icon: "💰" },
-  { to: "/admin/fichas", label: "Fichas", icon: "🏉" },
+  { to: "/admin/abonos", label: "Cobros Abonos", icon: "🌎" },
   { to: "/admin/cobros", label: "Extraordinarios", icon: "✈️" },
+  { to: "/admin/fichas", label: "Fichas", icon: "🏉" },
   { to: "/admin/reportes", label: "Reportes", icon: "📈" },
   { to: "/admin/auditoria", label: "Auditoría", icon: "🔎" },
   { to: "/admin/admins", label: "Admins", icon: "🛡️" },
@@ -44,9 +45,9 @@ export default function AdminSidebar() {
           <NavLink key={link.to} to={link.to} end={link.end}
             style={({ isActive }) => ({
               display: "flex", alignItems: "center", gap: 10,
-              padding: "9px 16px", textDecoration: "none",
+              padding: "8px 16px", textDecoration: "none",
               fontFamily: "'Barlow Condensed'", fontWeight: 600,
-              fontSize: "0.82rem", letterSpacing: "0.06em", textTransform: "uppercase",
+              fontSize: "0.8rem", letterSpacing: "0.06em", textTransform: "uppercase",
               color: isActive ? "white" : "var(--gris-medio)",
               background: isActive ? "var(--verde-oscuro)" : "transparent",
               borderLeft: isActive ? "3px solid var(--verde-claro)" : "3px solid transparent",
